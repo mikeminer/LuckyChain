@@ -1,1088 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>LuckyChain | Your Lucky Moment, Secured by Blockchain</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Google Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet"
-  />
-  <style>
-    :root {
-      --bg-gradient: radial-gradient(circle at top, #2f80ed 0, #14131a 40%, #050509 100%);
-      --card-bg: rgba(15, 15, 24, 0.9);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --accent: #ffb347;
-      --accent-strong: #ff6b6b;
-      --accent-soft: rgba(255, 179, 71, 0.16);
-      --text-main: #f5f5ff;
-      --text-muted: #a0a3bd;
-      --error: #ff4d6a;
-      --success: #3dd68c;
-      --shadow-strong: 0 24px 60px rgba(0, 0, 0, 0.75);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
+<meta charset="UTF-8">
+<title>LuckyChain – SuperEnalotto On-Chain</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
     body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", sans-serif;
-      background: var(--bg-gradient);
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
+        background: radial-gradient(circle at top, #0a0a0a 10%, #000 70%);
+        color: #fff;
+        font-family: 'Montserrat', sans-serif;
+        text-align: center;
+        padding: 30px;
     }
-
-    .app {
-      width: 100%;
-      max-width: 1180px;
-      display: grid;
-      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-      gap: 24px;
+    h1 {
+        font-size: 3rem;
+        text-shadow: 0 0 15px #00eaff;
     }
-
-    @media (max-width: 960px) {
-      .app {
-        grid-template-columns: minmax(0, 1fr);
-      }
+    select, button, input {
+        padding: 12px;
+        margin: 8px;
+        border-radius: 10px;
+        border: none;
+        font-size: 16px;
     }
-
-    .card {
-      background: var(--card-bg);
-      border-radius: 24px;
-      border: 1px solid var(--card-border);
-      box-shadow: var(--shadow-strong);
-      padding: 20px 22px;
-      backdrop-filter: blur(18px);
+    button {
+        background: #00eaff;
+        color: #000;
+        cursor: pointer;
+        transition: 0.2s;
+        font-weight: 700;
     }
-
-    .header-card {
-      grid-column: 1 / -1;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      position: relative;
-      overflow: hidden;
+    button:hover {
+        transform: scale(1.05);
+        background: #00bcd4;
     }
-
-    .header-card::before {
-      content: "";
-      position: absolute;
-      inset: -40%;
-      background: radial-gradient(circle at 10% -10%, rgba(255, 255, 255, 0.11), transparent 60%);
-      opacity: 0.6;
-      pointer-events: none;
+    .panel {
+        background: rgba(255,255,255,0.07);
+        padding: 20px;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 500px;
+        margin: 20px auto;
+        box-shadow: 0 0 15px #00eaff55;
     }
-
-    .header-content {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: center;
+    .numbers input {
+        width: 55px;
+        font-size: 18px;
+        text-align: center;
     }
-
-    .brand {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+    .winner-number {
+        background: #00eaff;
+        color: #000;
+        padding: 8px 12px;
+        border-radius: 10px;
+        margin: 4px;
+        display: inline-block;
+        font-weight: bold;
+        font-size: 20px;
+        box-shadow: 0 0 10px #00eaff;
     }
-
-    .brand-title {
-      font-size: 26px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      background: linear-gradient(120deg, #ffffff, #ffb347, #ff6b6b);
-      -webkit-background-clip: text;
-      color: transparent;
-    }
-
-    .brand-subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-    }
-
-    .wallet-area {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 8px;
-      min-width: 220px;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 999px;
-      padding: 6px 14px;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      background: rgba(0, 0, 0, 0.45);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: var(--text-muted);
-    }
-
-    .btn {
-      border: none;
-      outline: none;
-      cursor: pointer;
-      border-radius: 999px;
-      padding: 9px 18px;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #050509;
-      background: linear-gradient(120deg, #ffb347, #ff6b6b);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .btn[disabled] {
-      opacity: 0.55;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-main);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: none;
-    }
-
-    .wallet-address {
-      font-size: 12px;
-      color: var(--text-muted);
-      max-width: 260px;
-      text-align: right;
-      word-break: break-all;
-    }
-
-    .network-bar {
-      margin-top: 6px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .network-pill {
-      font-size: 11px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(8, 8, 15, 0.88);
-      color: var(--text-muted);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .network-pill span.dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #46475b;
-    }
-
-    .network-pill.active {
-      background: var(--accent-soft);
-      border-color: rgba(255, 179, 71, 0.75);
-      color: var(--accent);
-    }
-
-    .network-pill.active span.dot {
-      background: var(--accent-strong);
-      box-shadow: 0 0 12px rgba(255, 107, 107, 0.9);
-    }
-
-    /* Main layout */
-    .left-column {
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-
-    .right-column {
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-
-    .section-title {
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    @media (max-width: 768px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    .stat-card {
-      background: radial-gradient(circle at top, rgba(255, 179, 71, 0.12), transparent 60%);
-      border-radius: 18px;
-      padding: 10px 12px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .stat-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .stat-value {
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .stat-sub {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    /* Ticket form */
-    .ticket-form {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .ticket-grid {
-      display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    @media (max-width: 768px) {
-      .ticket-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-    }
-
-    .field-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-    }
-
-    .number-input {
-      width: 100%;
-      border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(6, 6, 12, 0.92);
-      color: var(--text-main);
-      padding: 9px 6px;
-      text-align: center;
-      font-size: 13px;
-      outline: none;
-      transition: border 0.15s ease, box-shadow 0.15s ease, transform 0.07s ease;
-    }
-
-    .number-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(255, 179, 71, 0.5);
-      transform: translateY(-1px);
-    }
-
-    .flex-row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-
-    .badge {
-      font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: var(--text-muted);
-    }
-
-    .badge-accent {
-      border-color: rgba(61, 214, 140, 0.8);
-      color: var(--success);
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 4px;
-    }
-
-    /* Draw info */
-    .draw-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.2fr);
-      gap: 12px;
-    }
-
-    .draw-balls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .ball {
-      width: 34px;
-      height: 34px;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 600;
-      background: radial-gradient(circle at 30% 10%, #ffffff, #ffe8c3, #ffb347);
-      color: #2b1b02;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
-    }
-
-    .ball.jolly {
-      background: radial-gradient(circle at 30% 10%, #ffffff, #c3e9ff, #2f80ed);
-    }
-
-    .ball.superstar {
-      background: radial-gradient(circle at 30% 10%, #ffffff, #ffd1e3, #ff4d6a);
-    }
-
-    .status-tag {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      padding: 4px 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      color: var(--text-muted);
-    }
-
-    .status-tag.live {
-      border-color: rgba(61, 214, 140, 0.8);
-      color: var(--success);
-    }
-
-    .status-tag.closed {
-      border-color: rgba(255, 107, 107, 0.8);
-      color: var(--accent-strong);
-    }
-
-    /* Messages */
-    .message {
-      font-size: 12px;
-      margin-top: 6px;
-    }
-
-    .message.error {
-      color: var(--error);
-    }
-
-    .message.success {
-      color: var(--success);
-    }
-
-    .message.info {
-      color: var(--text-muted);
-    }
-
-    .link-muted {
-      color: var(--text-muted);
-      font-size: 11px;
-      text-decoration: none;
-    }
-
-    .link-muted:hover {
-      text-decoration: underline;
-    }
-  </style>
+</style>
 </head>
 <body>
-  <div class="app">
-    <!-- Header -->
-    <div class="card header-card">
-      <div class="header-content">
-        <div class="brand">
-          <div class="brand-title">LuckyChain</div>
-          <div class="brand-subtitle">Your lucky moment, secured by blockchain</div>
-        </div>
-        <div class="wallet-area">
-          <div>
-            <button id="connectBtn" class="btn">Connect Wallet</button>
-          </div>
-          <div id="walletAddress" class="wallet-address">
-            Not connected
-          </div>
-        </div>
-      </div>
 
-      <div class="network-bar">
-        <span class="pill">Select Network</span>
-        <button class="network-pill active" data-network="baseMainnet">
-          <span class="dot"></span> Base Mainnet
-        </button>
-        <button class="network-pill" data-network="baseSepolia">
-          <span class="dot"></span> Base Sepolia
-        </button>
-        <button class="network-pill" data-network="optimismMainnet">
-          <span class="dot"></span> Optimism Mainnet
-        </button>
-        <button class="network-pill" data-network="optimismSepolia">
-          <span class="dot"></span> Optimism Sepolia
-        </button>
-      </div>
+<h1>LuckyChain 💎</h1>
+<p>“Your Lucky Moment, Secured by Blockchain”</p>
+
+<div class="panel">
+    <h2>1️⃣ Connect Wallet</h2>
+    <button onclick="connectWallet()">Connect</button>
+</div>
+
+<div class="panel">
+    <h2>2️⃣ Select Network</h2>
+    <select id="networkSelector" onchange="switchNetwork()">
+        <option value="baseSepolia">Base Sepolia</option>
+        <option value="baseMainnet">Base Mainnet</option>
+        <option value="opSepolia">Optimism Sepolia</option>
+        <option value="opMainnet">Optimism Mainnet</option>
+    </select>
+</div>
+
+<div class="panel">
+    <h2>3️⃣ Buy Ticket (1 USDC)</h2>
+    <div class="numbers">
+        <input id="n1" type="number" min="1" max="90">
+        <input id="n2" type="number" min="1" max="90">
+        <input id="n3" type="number" min="1" max="90">
+        <input id="n4" type="number" min="1" max="90">
+        <input id="n5" type="number" min="1" max="90">
+        <input id="n6" type="number" min="1" max="90">
     </div>
 
-    <!-- LEFT COLUMN -->
-    <div class="left-column">
-      <!-- Game stats -->
-      <div class="card">
-        <div class="section-title">Current Round</div>
-        <div class="flex-row" style="margin-bottom: 10px;">
-          <div class="badge" id="networkLabel">Network: Base Mainnet</div>
-          <div id="roundStatusTag" class="status-tag live">Waiting for tickets</div>
-        </div>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-label">Round</div>
-            <div class="stat-value" id="currentRound">-</div>
-            <div class="stat-sub">Active draw cycle</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Jackpot</div>
-            <div class="stat-value" id="currentJackpot">-</div>
-            <div class="stat-sub">USDC pooled across rounds</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Tickets</div>
-            <div class="stat-value" id="ticketsSold">- / 100</div>
-            <div class="stat-sub">Tickets in this round</div>
-          </div>
-        </div>
-        <div id="statsMessage" class="message info">
-          Connect your wallet and select a network to load on-chain data.
-        </div>
-      </div>
+    <p>Jolly: <input id="jolly" type="number" min="1" max="90"></p>
+    <p>Superstar: <input id="superstar" type="number" min="1" max="90"></p>
 
-      <!-- Last draw -->
-      <div class="card">
-        <div class="section-title">Last Draw</div>
-        <div class="draw-grid">
-          <div>
-            <div class="flex-row" style="margin-bottom: 10px;">
-              <div class="badge" id="lastRoundLabel">Round: -</div>
-              <div id="lastDrawStatus" class="status-tag">No draws yet</div>
-            </div>
-            <div class="draw-balls" id="lastDrawNumbers">
-              <!-- Filled by JS -->
-            </div>
-          </div>
-          <div class="message info" id="lastDrawMessage">
-            When a round reaches 100 tickets, Chainlink VRF will trigger a fair, tamper-proof draw.
-          </div>
-        </div>
-      </div>
-    </div>
+    <button onclick="buyTicket()">Buy Ticket</button>
+</div>
 
-    <!-- RIGHT COLUMN -->
-    <div class="right-column">
-      <!-- Ticket purchase -->
-      <div class="card">
-        <div class="section-title">Play Your Ticket</div>
-        <div class="ticket-form">
-          <div>
-            <div class="field-label">Main numbers (1–90)</div>
-            <div class="ticket-grid">
-              <input type="number" min="1" max="90" class="number-input" id="num1" placeholder="1" />
-              <input type="number" min="1" max="90" class="number-input" id="num2" placeholder="2" />
-              <input type="number" min="1" max="90" class="number-input" id="num3" placeholder="3" />
-              <input type="number" min="1" max="90" class="number-input" id="num4" placeholder="4" />
-              <input type="number" min="1" max="90" class="number-input" id="num5" placeholder="5" />
-              <input type="number" min="1" max="90" class="number-input" id="num6" placeholder="6" />
-            </div>
-          </div>
+<div class="panel">
+    <h2>4️⃣ Current Round</h2>
+    <p><b>Round:</b> <span id="roundId">-</span></p>
+    <p><b>Tickets Sold:</b> <span id="ticketsSold">-</span></p>
+    <p><b>Jackpot:</b> <span id="jackpot">-</span> USDC</p>
+    <p><b>Drawn:</b> <span id="drawn">-</span></p>
 
-          <div class="flex-row">
-            <div style="flex: 1 1 0;">
-              <div class="field-label">Jolly</div>
-              <input type="number" min="1" max="90" class="number-input" id="jolly" placeholder="J" />
-            </div>
-            <div style="flex: 1 1 0;">
-              <div class="field-label">Superstar</div>
-              <input type="number" min="1" max="90" class="number-input" id="superstar" placeholder="★" />
-            </div>
-          </div>
+    <div id="winningNumbers"></div>
 
-          <div class="flex-row">
-            <div class="badge">Price: <strong>1.000000 USDC</strong></div>
-            <div class="badge badge-accent">Jackpot rolls over until a 6/6 winner hits</div>
-          </div>
+    <button onclick="loadRound()">Refresh</button>
+</div>
 
-          <div class="btn-row">
-            <button id="quickPickBtn" class="btn-ghost">Quick Pick</button>
-            <button id="approveBtn" class="btn-ghost">Approve USDC</button>
-            <button id="buyBtn" class="btn">Buy Ticket</button>
-          </div>
+<div class="panel">
+    <h2>5️⃣ Last Draw</h2>
+    <p><b>Round:</b> <span id="lastRoundId">-</span></p>
+    <div id="lastWinningNumbers"></div>
+</div>
 
-          <div id="actionMessage" class="message info">
-            You’ll need to approve USDC spending once per network, then you can buy tickets freely.
-          </div>
-        </div>
-      </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.8.1/ethers.min.js"></script>
+<script>
 
-      <!-- Footer small info -->
-      <div class="card">
-        <div class="section-title">How It Works</div>
-        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
-          LuckyChain runs a 6/90 lottery with Jolly and Superstar on top of
-          battle-tested networks like Base and Optimism.
-          Every 100 tickets, Chainlink VRF v2.5 requests unbiased randomness,
-          draws the winning combo, and pays out the entire jackpot to everyone
-          matching all 6 numbers. No 6/6? The jackpot rolls over to the next round.
-        </div>
-        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-          <span class="pill">VRF-powered • Non-custodial • On-chain</span>
-          <a class="link-muted" href="#" onclick="return false;">Made for degens, governed by math.</a>
-        </div>
-      </div>
-    </div>
-  </div>
+// -----------------------------
+// CONTRACT ADDRESSES
+// -----------------------------
 
-  <!-- Ethers.js -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
-  <script>
-    const { ethers } = window.ethers;
+const ADDR = {
+    baseSepolia: "0x33736a45DdFF374E9c3bab66D76C1B3B8292def0",
+    baseMainnet: "0x0000000000000000000000000000000000000000",
+    opSepolia:   "0x0000000000000000000000000000000000000000",
+    opMainnet:   "0x0000000000000000000000000000000000000000"
+};
 
-    // ---------------- CONFIG ----------------
+// -----------------------------
+// ABI (CORRETTA)
+// -----------------------------
 
-    const networks = {
-      baseMainnet: {
-        key: "baseMainnet",
-        label: "Base Mainnet",
-        chainId: 8453,
-        chainIdHex: "0x2105",
-        rpcUrl: "https://mainnet.base.org",
-        blockExplorer: "https://basescan.org",
-        contractAddress: "0xYourBaseMainnetContractAddressHere",
-        usdcAddress: "0x833589fCD6EDb6E08f4c7C32D4f71b54bdA02913"
-      },
-      baseSepolia: {
-        key: "baseSepolia",
-        label: "Base Sepolia",
-        chainId: 84532,
-        chainIdHex: "0x14A34",
-        rpcUrl: "https://sepolia.base.org",
-        blockExplorer: "https://sepolia.basescan.org",
-        contractAddress: "0x33736a45DdFF374E9c3bab66D76C1B3B8292def0",
-        usdcAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
-      },
-      optimismMainnet: {
-        key: "optimismMainnet",
-        label: "Optimism Mainnet",
-        chainId: 10,
-        chainIdHex: "0xA",
-        rpcUrl: "https://mainnet.optimism.io",
-        blockExplorer: "https://optimistic.etherscan.io",
-        contractAddress: "0xYourOptimismMainnetContractAddressHere",
-        usdcAddress: "0x7F5c764cBc14f9669B88837ca1490cCa17c31607"
-      },
-      optimismSepolia: {
-        key: "optimismSepolia",
-        label: "Optimism Sepolia",
-        chainId: 11155420,
-        chainIdHex: "0xAA37DC",
-        rpcUrl: "https://sepolia.optimism.io",
-        blockExplorer: "https://sepolia-optimism.etherscan.io",
-        contractAddress: "0xYourOptimismSepoliaContractAddressHere",
-        usdcAddress: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7"
-      }
+const ABI = [
+    "function buyTicket(uint8[6] nums, uint8 jolly, uint8 superstar)",
+    "function getCurrentRoundInfo() view returns (uint256,uint256,uint256,bool,uint8[6],uint8,uint8)",
+    "function getLastDrawInfo() view returns (uint256,uint8[6],uint8,uint8,bool)"
+];
+
+let provider;
+let signer;
+let contract;
+
+// -----------------------------
+// Connect Wallet
+// -----------------------------
+async function connectWallet() {
+    if (!window.ethereum) {
+        return alert("Install MetaMask.");
+    }
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    alert("Wallet connected!");
+    initContract();
+}
+
+// -----------------------------
+// Switch Network
+// -----------------------------
+function initContract() {
+    const net = document.getElementById("networkSelector").value;
+    const address = ADDR[net];
+    if (!address) return alert("Invalid network.");
+    contract = new ethers.Contract(address, ABI, signer);
+}
+
+async function switchNetwork() {
+    const selected = document.getElementById("networkSelector").value;
+
+    const chainData = {
+        baseSepolia:  { chainId: "0x14A34", rpc: "https://base-sepolia.blockpi.network/v1/rpc/public" },
+        baseMainnet:  { chainId: "0x2105" },
+        opSepolia:    { chainId: "0xAAF0" },
+        opMainnet:    { chainId: "0xA" }
     };
 
-    // Minimal ABI for LuckyChain
-    const LUCKYCHAIN_ABI = [
-      {
-        "inputs":[
-          {"internalType":"uint8[6]","name":"nums","type":"uint8[6]"},
-          {"internalType":"uint8","name":"jolly","type":"uint8"},
-          {"internalType":"uint8","name":"superstar","type":"uint8"}
-        ],
-        "name":"buyTicket",
-        "outputs":[],
-        "stateMutability":"nonpayable",
-        "type":"function"
-      },
-      {
-        "inputs":[],
-        "name":"getCurrentRoundInfo",
-        "outputs":[
-          {"internalType":"uint256","name":"roundId","type":"uint256"},
-          {"internalType":"uint256","name":"ticketsSold","type":"uint256"},
-          {"internalType":"uint256","name":"currentJackpot","type":"uint256"},
-          {"internalType":"bool","name":"isDrawn","type":"bool"},
-          {"internalType":"uint8[6]","name":"winNums","type":"uint8[6]"},
-          {"internalType":"uint8","name":"jolly","type":"uint8"},
-          {"internalType":"uint8","name":"superstar","type":"uint8"}
-        ],
-        "stateMutability":"view",
-        "type":"function"
-      },
-      {
-        "inputs":[],
-        "name":"getLastDrawInfo",
-        "outputs":[
-          {"internalType":"uint256","name":"roundId","type":"uint256"},
-          {"internalType":"uint8[6]","name":"winNums","type":"uint8[6]"},
-          {"internalType":"uint8","name":"jolly","type":"uint8"},
-          {"internalType":"uint8","name":"superstar","type":"uint8"},
-          {"internalType":"bool","name":"drawn","type":"bool"}
-        ],
-        "stateMutability":"view",
-        "type":"function"
-      }
+    const { chainId } = chainData[selected];
+
+    await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId }]
+    });
+
+    initContract();
+}
+
+// -----------------------------
+// Buy Ticket
+// -----------------------------
+async function buyTicket() {
+    const nums = [
+        parseInt(n1.value),
+        parseInt(n2.value),
+        parseInt(n3.value),
+        parseInt(n4.value),
+        parseInt(n5.value),
+        parseInt(n6.value),
     ];
 
-    // Minimal ERC20 ABI
-    const ERC20_ABI = [
-      {
-        "constant":true,
-        "inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],
-        "name":"allowance",
-        "outputs":[{"name":"","type":"uint256"}],
-        "type":"function"
-      },
-      {
-        "constant":false,
-        "inputs":[{"name":"spender","type":"address"},{"name":"value","type":"uint256"}],
-        "name":"approve",
-        "outputs":[{"name":"","type":"bool"}],
-        "type":"function"
-      },
-      {
-        "constant":true,
-        "inputs":[{"name":"account","type":"address"}],
-        "name":"balanceOf",
-        "outputs":[{"name":"","type":"uint256"}],
-        "type":"function"
-      }
-    ];
+    const j = parseInt(jolly.value);
+    const s = parseInt(superstar.value);
 
-    let provider = null;
-    let signer = null;
-    let currentAccount = null;
-    let currentNetworkKey = "baseMainnet";
-    let luckyContract = null;
-    let usdcContract = null;
+    const tx = await contract.buyTicket(nums, j, s);
+    await tx.wait();
 
-    const connectBtn = document.getElementById("connectBtn");
-    const walletAddressEl = document.getElementById("walletAddress");
-    const networkLabelEl = document.getElementById("networkLabel");
-    const statsMessageEl = document.getElementById("statsMessage");
-    const lastRoundLabelEl = document.getElementById("lastRoundLabel");
-    const lastDrawStatusEl = document.getElementById("lastDrawStatus");
-    const lastDrawNumbersEl = document.getElementById("lastDrawNumbers");
-    const lastDrawMessageEl = document.getElementById("lastDrawMessage");
-    const currentRoundEl = document.getElementById("currentRound");
-    const currentJackpotEl = document.getElementById("currentJackpot");
-    const ticketsSoldEl = document.getElementById("ticketsSold");
-    const roundStatusTagEl = document.getElementById("roundStatusTag");
-    const approveBtn = document.getElementById("approveBtn");
-    const buyBtn = document.getElementById("buyBtn");
-    const quickPickBtn = document.getElementById("quickPickBtn");
-    const actionMessageEl = document.getElementById("actionMessage");
+    alert("Ticket bought!");
+}
 
-    function shortenAddress(addr) {
-      if (!addr) return "";
-      return addr.slice(0, 6) + "..." + addr.slice(-4);
-    }
+// -----------------------------
+// Load Round Info
+// -----------------------------
+async function loadRound() {
+    try {
+        const data = await contract.getCurrentRoundInfo();
 
-    function setNetworkActive(key) {
-      currentNetworkKey = key;
-      const cfg = networks[key];
-      document.querySelectorAll(".network-pill").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.network === key);
-      });
-      networkLabelEl.textContent = `Network: ${cfg.label}`;
-    }
+        document.getElementById("roundId").textContent = data[0];
+        document.getElementById("ticketsSold").textContent = data[1];
+        document.getElementById("jackpot").textContent = (Number(data[2]) / 1e6).toFixed(2);
+        document.getElementById("drawn").textContent = data[3] ? "YES" : "NO";
 
-    async function handleConnect() {
-      if (!window.ethereum) {
-        alert("No wallet detected. Please install MetaMask or a compatible wallet.");
-        return;
-      }
-      try {
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts"
-        });
-        currentAccount = accounts[0];
-        walletAddressEl.textContent = shortenAddress(currentAccount);
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = await provider.getSigner();
+        const nums = data[4];
 
-        await ensureCorrectNetwork();
-        await initContracts();
-        await refreshAllInfo();
-      } catch (err) {
+        let html = "";
+        for (let n of nums) {
+            html += `<span class="winner-number">${n}</span>`;
+        }
+        document.getElementById("winningNumbers").innerHTML = html;
+
+        loadLastDraw();
+    } catch (err) {
         console.error(err);
-        walletAddressEl.textContent = "Connection failed";
-      }
+        alert("Failed to load round data.");
     }
+}
 
-    async function ensureCorrectNetwork() {
-      const cfg = networks[currentNetworkKey];
-      const chainId = await window.ethereum.request({ method: "eth_chainId" });
-      if (chainId.toLowerCase() !== cfg.chainIdHex.toLowerCase()) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: cfg.chainIdHex }]
-          });
-        } catch (switchError) {
-          // If the chain is not added, try adding
-          if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: "wallet_addEthereumChain",
-              params: [{
-                chainId: cfg.chainIdHex,
-                chainName: cfg.label,
-                rpcUrls: [cfg.rpcUrl],
-                nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-                blockExplorerUrls: [cfg.blockExplorer]
-              }]
-            });
-          } else {
-            throw switchError;
-          }
-        }
-      }
+// -----------------------------
+// Load Last Draw Info
+// -----------------------------
+async function loadLastDraw() {
+    const data = await contract.getLastDrawInfo();
+
+    document.getElementById("lastRoundId").textContent = data[0];
+
+    let html = "";
+    for (let n of data[1]) {
+        html += `<span class="winner-number">${n}</span>`;
     }
+    html += `<br>Jolly: ${data[2]} • Superstar: ${data[3]}`;
 
-    async function initContracts() {
-      const cfg = networks[currentNetworkKey];
-      if (!cfg.contractAddress || cfg.contractAddress.startsWith("0xYour")) {
-        statsMessageEl.textContent =
-          "Set the LuckyChain contract address for this network in index.html.";
-        statsMessageEl.className = "message error";
-        return;
-      }
-      luckyContract = new ethers.Contract(cfg.contractAddress, LUCKYCHAIN_ABI, signer || provider);
-      usdcContract = new ethers.Contract(cfg.usdcAddress, ERC20_ABI, signer || provider);
-    }
+    document.getElementById("lastWinningNumbers").innerHTML = html;
+}
 
-    async function refreshAllInfo() {
-      if (!luckyContract) return;
+</script>
 
-      statsMessageEl.textContent = "Loading on-chain data...";
-      statsMessageEl.className = "message info";
-
-      try {
-        const [curInfo, lastInfo] = await Promise.all([
-          luckyContract.getCurrentRoundInfo(),
-          luckyContract.getLastDrawInfo()
-        ]);
-
-        // Current round
-        const roundId = curInfo[0];
-        const ticketsSold = curInfo[1];
-        const jackpotRaw = curInfo[2];
-        const isDrawn = curInfo[3];
-
-        currentRoundEl.textContent = roundId.toString();
-        const jackpotUsdc = Number(jackpotRaw) / 1e6;
-        currentJackpotEl.textContent = jackpotUsdc.toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        }) + " USDC";
-        ticketsSoldEl.textContent = `${ticketsSold.toString()} / 100`;
-
-        if (ticketsSold >= 100) {
-          roundStatusTagEl.textContent = "Draw pending / VRF";
-          roundStatusTagEl.className = "status-tag closed";
-        } else {
-          roundStatusTagEl.textContent = "Open for tickets";
-          roundStatusTagEl.className = "status-tag live";
-        }
-
-        statsMessageEl.textContent = "Data loaded from the blockchain.";
-        statsMessageEl.className = "message success";
-
-        // Last draw
-        const lastRoundId = lastInfo[0];
-        const lastNumbers = lastInfo[1];
-        const lastJolly = lastInfo[2];
-        const lastSuperstar = lastInfo[3];
-        const lastDrawn = lastInfo[4];
-
-        lastDrawNumbersEl.innerHTML = "";
-        if (!lastDrawn || lastRoundId === 0n) {
-          lastRoundLabelEl.textContent = "Round: -";
-          lastDrawStatusEl.textContent = "No draws yet";
-          lastDrawStatusEl.className = "status-tag";
-          lastDrawMessageEl.textContent =
-            "As soon as a round reaches 100 tickets, a provably-fair draw will be executed.";
-        } else {
-          lastRoundLabelEl.textContent = `Round: ${lastRoundId.toString()}`;
-          lastDrawStatusEl.textContent = "Completed draw";
-          lastDrawStatusEl.className = "status-tag";
-
-          lastNumbers.forEach(n => {
-            const div = document.createElement("div");
-            div.className = "ball";
-            div.textContent = n.toString();
-            lastDrawNumbersEl.appendChild(div);
-          });
-
-          const j = document.createElement("div");
-          j.className = "ball jolly";
-          j.textContent = lastJolly.toString();
-          lastDrawNumbersEl.appendChild(j);
-
-          const s = document.createElement("div");
-          s.className = "ball superstar";
-          s.textContent = lastSuperstar.toString();
-          lastDrawNumbersEl.appendChild(s);
-
-          lastDrawMessageEl.textContent =
-            "These are the latest winning numbers. Match all 6 to share the jackpot.";
-        }
-      } catch (err) {
-        console.error(err);
-        statsMessageEl.textContent = "Failed to load round data.";
-        statsMessageEl.className = "message error";
-      }
-    }
-
-    function parseTicketInputs() {
-      const vals = [];
-      for (let i = 1; i <= 6; i++) {
-        const v = Number(document.getElementById(`num${i}`).value);
-        vals.push(v);
-      }
-      const jolly = Number(document.getElementById("jolly").value);
-      const superstar = Number(document.getElementById("superstar").value);
-
-      // basic validation on frontend
-      const numSet = new Set(vals);
-      if (vals.some(v => !Number.isInteger(v) || v < 1 || v > 90)) {
-        throw new Error("Main numbers must be integers between 1 and 90.");
-      }
-      if (numSet.size !== 6) {
-        throw new Error("Main numbers must be unique.");
-      }
-      if (!Number.isInteger(jolly) || jolly < 1 || jolly > 90) {
-        throw new Error("Jolly must be between 1 and 90.");
-      }
-      if (!Number.isInteger(superstar) || superstar < 1 || superstar > 90) {
-        throw new Error("Superstar must be between 1 and 90.");
-      }
-
-      return { nums: vals, jolly, superstar };
-    }
-
-    function quickPick() {
-      const picks = new Set();
-      while (picks.size < 6) {
-        picks.add(1 + Math.floor(Math.random() * 90));
-      }
-      const arr = Array.from(picks);
-      for (let i = 0; i < 6; i++) {
-        document.getElementById(`num${i + 1}`).value = arr[i];
-      }
-      document.getElementById("jolly").value = 1 + Math.floor(Math.random() * 90);
-      document.getElementById("superstar").value = 1 + Math.floor(Math.random() * 90);
-    }
-
-    async function ensureAllowance() {
-      if (!currentAccount || !usdcContract || !luckyContract) {
-        throw new Error("Wallet and contracts must be initialized first.");
-      }
-      const cfg = networks[currentNetworkKey];
-      const ticketPrice = ethers.toBigInt(1_000_000); // 1 USDC (6 decimals)
-
-      const allowance = await usdcContract.allowance(
-        currentAccount,
-        cfg.contractAddress
-      );
-      if (allowance >= ticketPrice) {
-        return false; // no new approval needed
-      }
-      // Need approval
-      actionMessageEl.textContent = "Sending USDC approval transaction...";
-      actionMessageEl.className = "message info";
-      const tx = await usdcContract.approve(
-        cfg.contractAddress,
-        ethers.MaxUint256
-      );
-      await tx.wait();
-      actionMessageEl.textContent = "USDC approval confirmed. You can now buy tickets!";
-      actionMessageEl.className = "message success";
-      return true;
-    }
-
-    async function handleApprove() {
-      try {
-        approveBtn.disabled = true;
-        buyBtn.disabled = true;
-        await ensureCorrectNetwork();
-        await initContracts();
-        await ensureAllowance();
-      } catch (err) {
-        console.error(err);
-        actionMessageEl.textContent = err.message || "Approval failed.";
-        actionMessageEl.className = "message error";
-      } finally {
-        approveBtn.disabled = false;
-        buyBtn.disabled = false;
-      }
-    }
-
-    async function handleBuyTicket() {
-      if (!luckyContract || !usdcContract) {
-        actionMessageEl.textContent = "Connect wallet and set contract addresses first.";
-        actionMessageEl.className = "message error";
-        return;
-      }
-
-      try {
-        const { nums, jolly, superstar } = parseTicketInputs();
-
-        approveBtn.disabled = true;
-        buyBtn.disabled = true;
-        await ensureCorrectNetwork();
-
-        // Ensure allowance
-        await ensureAllowance();
-
-        actionMessageEl.textContent = "Submitting buyTicket transaction...";
-        actionMessageEl.className = "message info";
-
-        const numsTuple = [nums[0], nums[1], nums[2], nums[3], nums[4], nums[5]];
-        const tx = await luckyContract.buyTicket(numsTuple, jolly, superstar);
-        await tx.wait();
-
-        actionMessageEl.textContent = "Ticket successfully purchased! Good luck 🍀";
-        actionMessageEl.className = "message success";
-
-        await refreshAllInfo();
-      } catch (err) {
-        console.error(err);
-        actionMessageEl.textContent = err.message || "Ticket purchase failed.";
-        actionMessageEl.className = "message error";
-      } finally {
-        approveBtn.disabled = false;
-        buyBtn.disabled = false;
-      }
-    }
-
-    // ---------------- Event wiring ----------------
-
-    connectBtn.addEventListener("click", handleConnect);
-    approveBtn.addEventListener("click", handleApprove);
-    buyBtn.addEventListener("click", handleBuyTicket);
-    quickPickBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      quickPick();
-    });
-
-    document.querySelectorAll(".network-pill").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const key = btn.dataset.network;
-        setNetworkActive(key);
-        if (currentAccount) {
-          try {
-            await ensureCorrectNetwork();
-            await initContracts();
-            await refreshAllInfo();
-          } catch (err) {
-            console.error(err);
-          }
-        }
-      });
-    });
-
-    // If wallet already connected, try to reconnect on load
-    window.addEventListener("load", async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: "eth_accounts" });
-          if (accounts && accounts.length > 0) {
-            currentAccount = accounts[0];
-            walletAddressEl.textContent = shortenAddress(currentAccount);
-            provider = new ethers.BrowserProvider(window.ethereum);
-            signer = await provider.getSigner();
-            await ensureCorrectNetwork();
-            await initContracts();
-            await refreshAllInfo();
-          }
-        } catch (e) {
-          console.warn("Autoconnect failed", e);
-        }
-      }
-    });
-
-    // React to network/account changes
-    if (window.ethereum) {
-      window.ethereum.on("accountsChanged", async (accounts) => {
-        if (accounts.length === 0) {
-          currentAccount = null;
-          walletAddressEl.textContent = "Not connected";
-        } else {
-          currentAccount = accounts[0];
-          walletAddressEl.textContent = shortenAddress(currentAccount);
-          provider = new ethers.BrowserProvider(window.ethereum);
-          signer = await provider.getSigner();
-          await ensureCorrectNetwork();
-          await initContracts();
-          await refreshAllInfo();
-        }
-      });
-
-      window.ethereum.on("chainChanged", async () => {
-        // re-init contracts on chain change
-        provider = new ethers.BrowserProvider(window.ethereum);
-        signer = await provider.getSigner();
-        await initContracts();
-        await refreshAllInfo();
-      });
-    }
-  </script>
 </body>
 </html>
