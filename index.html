@@ -1,417 +1,336 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>LuckyChain – Base Sepolia</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
+<meta charset="UTF-8">
+<title>LuckyChain – SuperEnalotto On-Chain</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.1/dist/ethers.umd.min.js"></script>
+
+<style>
     body {
-      background: radial-gradient(circle at top, #101020 0, #02020a 60%, #000 100%);
-      color: #fff;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-        sans-serif;
-      text-align: center;
-      padding: 30px 10px;
+        background: #0f0f0f;
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+        padding: 30px;
+        max-width: 800px;
+        margin: auto;
     }
-    h1 {
-      font-size: 2.5rem;
-      text-shadow: 0 0 18px #00eaffaa;
-      margin-bottom: 0.4rem;
-    }
-    h2 {
-      margin-top: 0;
-      margin-bottom: 0.7rem;
-    }
-    p {
-      margin: 6px 0;
-    }
-    .subtitle {
-      font-size: 0.9rem;
-      opacity: 0.85;
-      margin-bottom: 1.5rem;
-    }
-    .panel {
-      background: rgba(17, 25, 40, 0.9);
-      border-radius: 18px;
-      padding: 18px 16px;
-      margin: 16px auto;
-      max-width: 520px;
-      box-shadow: 0 0 18px rgba(0, 234, 255, 0.22);
-      border: 1px solid rgba(0, 234, 255, 0.2);
-    }
-    button,
-    input {
-      font-size: 15px;
-      border-radius: 12px;
-      border: none;
-      padding: 10px 14px;
-      margin: 6px 4px;
+    h1 { color: #00d4ff; }
+    .card {
+        border: 1px solid #00d4ff;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
     }
     button {
-      background: linear-gradient(135deg, #00eaff, #00bcd4);
-      color: #000;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 0 12px rgba(0, 234, 255, 0.7);
-      transition: transform 0.15s ease, box-shadow 0.15s ease,
-        filter 0.15s ease;
+        background: #00d4ff;
+        color: black;
+        border: none;
+        padding: 10px 18px;
+        font-size: 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-top: 10px;
     }
-    button:hover {
-      transform: translateY(-1px) scale(1.03);
-      box-shadow: 0 0 20px rgba(0, 234, 255, 0.9);
-      filter: brightness(1.05);
+    input {
+        width: 60px;
+        padding: 5px;
+        margin-right: 5px;
+        text-align: center;
     }
-    button:disabled {
-      opacity: 0.5;
-      cursor: default;
-      box-shadow: none;
-      transform: none;
-    }
-    .numbers-row input {
-      width: 54px;
-      text-align: center;
-      font-size: 16px;
-    }
-    .small {
-      font-size: 0.8rem;
-      opacity: 0.8;
+    .label { color: #00d4ff; font-weight: bold; }
+    .small { font-size: 0.8rem; opacity: 0.8; }
+    .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid #00d4ff66;
+        font-size: 0.7rem;
+        margin-top: 4px;
     }
     .winner-number {
-      background: #00eaff;
-      color: #000;
-      padding: 6px 10px;
-      border-radius: 999px;
-      margin: 3px;
-      display: inline-block;
-      font-weight: 700;
-      font-size: 0.95rem;
-      box-shadow: 0 0 10px #00eaffaa;
+        background: #00d4ff;
+        color: #000;
+        padding: 6px 10px;
+        border-radius: 999px;
+        margin: 3px;
+        display: inline-block;
+        font-weight: bold;
     }
-    .tag {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      background: rgba(255, 255, 255, 0.08);
-      margin-top: 4px;
-    }
-    #status {
-      margin-top: 10px;
-      font-size: 0.85rem;
-      opacity: 0.9;
-      min-height: 1.1em;
-    }
-  </style>
+</style>
 </head>
+
 <body>
-  <h1>LuckyChain 💎</h1>
-  <p class="subtitle">
-    SuperEnalotto-style 6/90 • Base Sepolia • 1 USDC per ticket
-  </p>
 
-  <div class="panel">
-    <h2>1️⃣ Connect Wallet</h2>
-    <button id="connectBtn" onclick="connectWallet()">Connect MetaMask</button>
-    <p id="walletInfo" class="small">Not connected</p>
-    <p class="small tag">Network: Base Sepolia (chainId 84532)</p>
-  </div>
+<h1>LuckyChain – SuperEnalotto On-Chain</h1>
+<p>Your Lucky Moment, Secured by Blockchain</p>
 
-  <div class="panel">
-    <h2>2️⃣ Buy Ticket (1 USDC)</h2>
-    <p class="small">
-      Pick 6 distinct numbers between 1 and 90, plus Jolly & Superstar.
-    </p>
-    <div class="numbers-row">
-      <input id="n1" type="number" min="1" max="90" placeholder="n1" />
-      <input id="n2" type="number" min="1" max="90" placeholder="n2" />
-      <input id="n3" type="number" min="1" max="90" placeholder="n3" />
-      <input id="n4" type="number" min="1" max="90" placeholder="n4" />
-      <input id="n5" type="number" min="1" max="90" placeholder="n5" />
-      <input id="n6" type="number" min="1" max="90" placeholder="n6" />
+<div class="card">
+    <button id="connectBtn">Connect Wallet</button>
+    <p id="account"></p>
+    <p id="network"></p>
+    <p class="small badge">Network: Base Sepolia (chainId 84532)</p>
+</div>
+
+<div class="card">
+    <h2>Buy a Ticket (1 USDC)</h2>
+    <p>Select 6 numbers (1–90), 1 Jolly, 1 Superstar</p>
+
+    <div>
+        <label class="label">Numbers:</label><br>
+        <input id="n1" type="number" min="1" max="90">
+        <input id="n2" type="number" min="1" max="90">
+        <input id="n3" type="number" min="1" max="90">
+        <input id="n4" type="number" min="1" max="90">
+        <input id="n5" type="number" min="1" max="90">
+        <input id="n6" type="number" min="1" max="90">
     </div>
-    <p>
-      Jolly:
-      <input
-        id="jolly"
-        type="number"
-        min="1"
-        max="90"
-        placeholder="J"
-        style="width: 70px"
-      />
-      Superstar:
-      <input
-        id="superstar"
-        type="number"
-        min="1"
-        max="90"
-        placeholder="S"
-        style="width: 90px"
-      />
-    </p>
-    <button id="buyBtn" onclick="buyTicket()" disabled>Buy Ticket</button>
+
+    <div>
+        <label class="label">Jolly:</label>
+        <input id="jolly" type="number" min="1" max="90">
+    </div>
+
+    <div>
+        <label class="label">Superstar:</label>
+        <input id="superstar" type="number" min="1" max="90">
+    </div>
+
+    <button id="buyBtn" disabled>Buy Ticket</button>
     <p class="small">
-      Make sure you hold test USDC
-      (<code>0x036CbD53842c5426634e7929541eC2318f3dCF7e</code>) on Base
-      Sepolia and have approved the contract to spend 1 USDC.
+        Make sure you hold test USDC (<code>0x036CbD53842c5426634e7929541eC2318f3dCF7e</code>)
+        on Base Sepolia and approved 1 USDC to this contract.
     </p>
-  </div>
+</div>
 
-  <div class="panel">
-    <h2>3️⃣ Current Round</h2>
-    <p><b>Round:</b> <span id="roundId">-</span></p>
-    <p><b>Tickets Sold:</b> <span id="ticketsSold">-</span></p>
-    <p><b>Jackpot:</b> <span id="jackpot">-</span> USDC</p>
-    <p><b>Drawn:</b> <span id="drawn">-</span></p>
+<div class="card">
+    <h2>Round Status</h2>
+    <p><span class="label">Current Round:</span> <span id="round"></span></p>
+    <p><span class="label">Tickets Sold:</span> <span id="ticketCount"></span> / 100</p>
+    <p><span class="label">Jackpot:</span> <span id="jackpot"></span> USDC</p>
+    <p><span class="label">Round Drawn?</span> <span id="finished"></span></p>
+</div>
 
-    <div id="winningNumbers"></div>
-    <p id="currentExtra" class="small"></p>
+<div class="card">
+    <h2>Winning Numbers (Current Round)</h2>
+    <p><span class="label">Numbers:</span> <span id="wn"></span></p>
+    <p><span class="label">Jolly:</span> <span id="wj"></span></p>
+    <p><span class="label">Superstar:</span> <span id="ws"></span></p>
+</div>
 
-    <button onclick="loadRoundInfo()">Refresh Round</button>
-  </div>
+<div class="card">
+    <h2>Last Draw</h2>
+    <p><span class="label">Round:</span> <span id="lastRound"></span></p>
+    <p><span class="label">Numbers:</span> <span id="lastWn"></span></p>
+    <p><span class="label">Jolly:</span> <span id="lastWj"></span></p>
+    <p><span class="label">Superstar:</span> <span id="lastWs"></span></p>
+</div>
 
-  <div class="panel">
-    <h2>4️⃣ Last Draw</h2>
-    <p><b>Round:</b> <span id="lastRoundId">-</span></p>
-    <div id="lastWinningNumbers"></div>
-  </div>
+<p id="status" class="small"></p>
 
-  <p id="status"></p>
+<script>
+/* -------------------------------------------------------------
+   CONFIG – METTI QUI L’ADDRESS DEL TUO CONTRATTO
+   (LuckyChainVRF_BaseSepolia su Base Sepolia)
+------------------------------------------------------------- */
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.8.1/ethers.min.js"></script>
-  <script>
-    // -----------------------------
-    // CONFIG
-    // -----------------------------
+const CONTRACT_ADDRESS = "0x33736a45DdFF374E9c3bab66D76C1B3B8292def0"; // cambia se hai un altro deploy
 
-    // ⬇️ METTI QUI L'ADDRESS DEL TUO CONTRATTO LuckyChainVRF_BaseSepolia ⬇️
-    const CONTRACT_ADDRESS = "0x33736a45DdFF374E9c3bab66D76C1B3B8292def0"; // sostituisci se diverso
+/* -------------------------------------------------------------
+   ABI DEL CONTRATTO (ALLINEATA AL TUO SOL)
+------------------------------------------------------------- */
 
-    // ABI perfettamente allineata al contratto che hai postato
-    const LUCKYCHAIN_ABI = [
-      "function buyTicket(uint8[6] nums, uint8 jolly, uint8 superstar)",
-      "function getCurrentRoundInfo() view returns (uint256 roundId, uint256 ticketsSold, uint256 currentJackpot, bool isDrawn, uint8[6] nums, uint8 jolly, uint8 superstar)",
-      "function getLastDrawInfo() view returns (uint256 roundId, uint8[6] nums, uint8 jolly, uint8 superstar, bool drawn)"
-    ];
+const ABI = [
+    "function buyTicket(uint8[6] nums, uint8 jolly, uint8 superstar)",
+    "function getCurrentRoundInfo() view returns (uint256 roundId, uint256 ticketsSold, uint256 currentJackpot, bool isDrawn, uint8[6] nums, uint8 jolly, uint8 superstar)",
+    "function getLastDrawInfo() view returns (uint256 roundId, uint8[6] nums, uint8 jolly, uint8 superstar, bool drawn)"
+];
 
-    let provider = null;
-    let signer = null;
-    let contract = null;
+/* -------------------------------------------------------------
+   GLOBALS
+------------------------------------------------------------- */
 
-    function $(id) {
-      return document.getElementById(id);
-    }
+let provider, signer, contract;
 
-    function setStatus(msg) {
-      $("status").textContent = msg || "";
-    }
+/* -------------------------------------------------------------
+   HELPERS
+------------------------------------------------------------- */
 
-    // -----------------------------
-    // CONNECT WALLET + NETWORK
-    // -----------------------------
+function $(id) { return document.getElementById(id); }
 
-    async function connectWallet() {
-      try {
+function setStatus(msg) {
+    $("status").innerText = msg || "";
+}
+
+/* -------------------------------------------------------------
+   CONNECT WALLET
+------------------------------------------------------------- */
+
+$("connectBtn").onclick = async () => {
+    try {
         if (!window.ethereum) {
-          alert("Please install MetaMask.");
-          return;
+            alert("Please install MetaMask.");
+            return;
         }
 
-        setStatus("Connecting wallet...");
         await window.ethereum.request({ method: "eth_requestAccounts" });
-
-        // ethers v6
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
+
         const addr = await signer.getAddress();
+        $("account").innerText = "Connected: " + addr;
 
-        $("walletInfo").textContent = `Connected: ${addr}`;
-        $("buyBtn").disabled = false;
-        setStatus("Wallet connected.");
+        const net = await provider.getNetwork();
+        const chainId = Number(net.chainId);
+        $("network").innerText = "Chain ID: " + chainId;
 
-        // ensure Base Sepolia (chainId 84532 -> 0x14A34)
-        await ensureBaseSepolia();
-        initContract();
-        await loadRoundInfo();
-      } catch (err) {
-        console.error("connectWallet error:", err);
-        setStatus("Failed to connect wallet. Check console.");
-      }
-    }
-
-    async function ensureBaseSepolia() {
-      const targetChainIdHex = "0x14A34"; // 84532
-
-      try {
-        const current = await provider.send("eth_chainId", []);
-        if (current !== targetChainIdHex) {
-          await window.ethereum.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: targetChainIdHex }]
-          });
-          setStatus("Switched to Base Sepolia.");
+        if (chainId !== 84532) {
+            setStatus("Please switch MetaMask to Base Sepolia (chainId 84532).");
+        } else {
+            setStatus("Connected on Base Sepolia.");
         }
-      } catch (err) {
-        console.warn("Network switch error:", err);
-        setStatus("Please switch MetaMask to Base Sepolia (chainId 84532).");
-      }
+
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+        $("buyBtn").disabled = false;
+
+        await updateUI();
+    } catch (e) {
+        console.error(e);
+        setStatus("Failed to connect wallet.");
+    }
+};
+
+/* -------------------------------------------------------------
+   UPDATE UI (ROUND STATUS + WINNING NUMBERS + LAST DRAW)
+------------------------------------------------------------- */
+
+async function updateUI() {
+    if (!contract) return;
+
+    try {
+        setStatus("Loading round info...");
+
+        const info = await contract.getCurrentRoundInfo();
+        // info = [roundId, ticketsSold, currentJackpot, isDrawn, nums[6], jolly, superstar]
+
+        const roundId        = info[0];
+        const ticketsSold    = info[1];
+        const currentJackpot = info[2];
+        const isDrawn        = info[3];
+        const nums           = info[4];
+        const jolly          = info[5];
+        const superstar      = info[6];
+
+        $("round").innerText       = roundId.toString();
+        $("ticketCount").innerText = ticketsSold.toString();
+        $("jackpot").innerText     = (Number(currentJackpot) / 1e6).toFixed(2);
+        $("finished").innerText    = isDrawn ? "YES" : "NO";
+
+        if (isDrawn) {
+            $("wn").innerText = Array.from(nums).join(", ");
+            $("wj").innerText = jolly.toString();
+            $("ws").innerText = superstar.toString();
+        } else {
+            $("wn").innerText = "-";
+            $("wj").innerText = "-";
+            $("ws").innerText = "-";
+        }
+
+        // Last draw info
+        const last = await contract.getLastDrawInfo();
+        // last = [roundId, nums[6], jolly, superstar, drawn]
+        const lastRoundId = last[0];
+        const lastNums    = last[1];
+        const lastJolly   = last[2];
+        const lastSuper   = last[3];
+        const lastDrawn   = last[4];
+
+        if (lastDrawn && (lastRoundId !== 0n && lastRoundId !== 0)) {
+            $("lastRound").innerText = lastRoundId.toString();
+            $("lastWn").innerText    = Array.from(lastNums).join(", ");
+            $("lastWj").innerText    = lastJolly.toString();
+            $("lastWs").innerText    = lastSuper.toString();
+        } else {
+            $("lastRound").innerText = "-";
+            $("lastWn").innerText    = "-";
+            $("lastWj").innerText    = "-";
+            $("lastWs").innerText    = "-";
+        }
+
+        setStatus("");
+    } catch (e) {
+        console.error(e);
+        setStatus("Failed to load round data.");
+    }
+}
+
+/* -------------------------------------------------------------
+   BUY TICKET
+------------------------------------------------------------- */
+
+$("buyBtn").onclick = async () => {
+    if (!contract) {
+        alert("Connect wallet first.");
+        return;
     }
 
-    function initContract() {
-      if (!signer) {
-        console.warn("Signer not ready yet.");
-        return;
-      }
-      contract = new ethers.Contract(CONTRACT_ADDRESS, LUCKYCHAIN_ABI, signer);
-    }
+    const nums = [
+        Number($("n1").value),
+        Number($("n2").value),
+        Number($("n3").value),
+        Number($("n4").value),
+        Number($("n5").value),
+        Number($("n6").value),
+    ];
+    const j = Number($("jolly").value);
+    const s = Number($("superstar").value);
 
-    // -----------------------------
-    // BUY TICKET
-    // -----------------------------
-
-    async function buyTicket() {
-      if (!contract) {
-        alert("Contract not initialized. Connect wallet first.");
-        return;
-      }
-
-      const nums = [
-        parseInt($("n1").value),
-        parseInt($("n2").value),
-        parseInt($("n3").value),
-        parseInt($("n4").value),
-        parseInt($("n5").value),
-        parseInt($("n6").value)
-      ];
-      const j = parseInt($("jolly").value);
-      const s = parseInt($("superstar").value);
-
-      // validations
-      const seen = new Set();
-      for (let i = 0; i < 6; i++) {
+    // basic validation
+    const seen = new Set();
+    for (let i = 0; i < 6; i++) {
         const v = nums[i];
-        if (isNaN(v) || v < 1 || v > 90) {
-          alert("All 6 main numbers must be between 1 and 90.");
-          return;
+        if (!Number.isInteger(v) || v < 1 || v > 90) {
+            alert("All 6 main numbers must be between 1 and 90.");
+            return;
         }
         if (seen.has(v)) {
-          alert("Main numbers must be distinct.");
-          return;
+            alert("Main numbers must be distinct.");
+            return;
         }
         seen.add(v);
-      }
-
-      if (isNaN(j) || j < 1 || j > 90) {
+    }
+    if (!Number.isInteger(j) || j < 1 || j > 90) {
         alert("Jolly must be between 1 and 90.");
         return;
-      }
-      if (isNaN(s) || s < 1 || s > 90) {
+    }
+    if (!Number.isInteger(s) || s < 1 || s > 90) {
         alert("Superstar must be between 1 and 90.");
         return;
-      }
+    }
 
-      try {
-        setStatus("Sending transaction to buy ticket...");
+    try {
+        setStatus("Sending transaction...");
         const tx = await contract.buyTicket(nums, j, s);
+        alert("Ticket purchased! Tx: " + tx.hash);
         await tx.wait();
-        setStatus("Ticket bought successfully!");
-        await loadRoundInfo();
-      } catch (err) {
-        console.error("buyTicket error:", err);
-        setStatus("Transaction failed. Check console for details.");
-      }
+        setStatus("Ticket confirmed on-chain.");
+        await updateUI();
+    } catch (e) {
+        console.error(e);
+        setStatus("Error buying ticket. Check console.");
+        alert("Error buying ticket.");
     }
+};
 
-    // -----------------------------
-    // LOAD CURRENT ROUND
-    // -----------------------------
+/* -------------------------------------------------------------
+   OPTIONAL: AUTO-REFRESH ON CHAIN CHANGE
+------------------------------------------------------------- */
 
-    async function loadRoundInfo() {
-      if (!contract) {
-        console.warn("No contract instance. Connect wallet first.");
-        return;
-      }
+if (window.ethereum) {
+    window.ethereum.on("chainChanged", () => {
+        window.location.reload();
+    });
+}
+</script>
 
-      try {
-        setStatus("Loading current round...");
-        const res = await contract.getCurrentRoundInfo();
-
-        const roundId = res[0];
-        const ticketsSold = res[1];
-        const currentJackpot = res[2];
-        const isDrawn = res[3];
-        const nums = res[4];
-        const jolly = res[5];
-        const superstar = res[6];
-
-        $("roundId").textContent = roundId.toString();
-        $("ticketsSold").textContent = ticketsSold.toString();
-        $("jackpot").textContent = (Number(currentJackpot) / 1e6).toFixed(2);
-        $("drawn").textContent = isDrawn ? "YES" : "NO";
-
-        let html = "";
-        if (isDrawn) {
-          for (let n of nums) {
-            html += `<span class="winner-number">${n}</span>`;
-          }
-          $("currentExtra").textContent = `Jolly: ${jolly} • Superstar: ${superstar}`;
-        } else {
-          html = `<span class="small">No draw yet for this round.</span>`;
-          $("currentExtra").textContent = "";
-        }
-        $("winningNumbers").innerHTML = html;
-
-        await loadLastDrawInfo();
-        setStatus("");
-      } catch (err) {
-        console.error("loadRoundInfo error:", err);
-        setStatus("Failed to load round data. See console.");
-      }
-    }
-
-    // -----------------------------
-    // LOAD LAST DRAW
-    // -----------------------------
-
-    async function loadLastDrawInfo() {
-      if (!contract) return;
-
-      try {
-        const res = await contract.getLastDrawInfo();
-        const roundId = res[0];
-        const nums = res[1];
-        const jolly = res[2];
-        const superstar = res[3];
-        const drawn = res[4];
-
-        if (!drawn || roundId === 0n || roundId === 0) {
-          $("lastRoundId").textContent = "-";
-          $("lastWinningNumbers").innerHTML =
-            '<span class="small">No draws yet.</span>';
-          return;
-        }
-
-        $("lastRoundId").textContent = roundId.toString();
-        let html = "";
-        for (let n of nums) {
-          html += `<span class="winner-number">${n}</span>`;
-        }
-        html += `<div class="small">Jolly: ${jolly} • Superstar: ${superstar}</div>`;
-        $("lastWinningNumbers").innerHTML = html;
-      } catch (err) {
-        console.error("loadLastDrawInfo error:", err);
-      }
-    }
-
-    // -----------------------------
-    // HANDLE CHAIN CHANGE
-    // -----------------------------
-    if (window.ethereum) {
-      window.ethereum.on("chainChanged", () => {
-        // re-init provider/signer/contract
-        connectWallet().catch(console.error);
-      });
-    }
-  </script>
 </body>
 </html>
