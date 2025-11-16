@@ -131,7 +131,7 @@ contract LuckyChainVRF_BaseMainnet is VRFConsumerBaseV2 {
     // Constructor
     // -------------------------
 
-    constructor(uint64 _subscriptionId)
+    constructor(uint256 _subscriptionId)
         VRFConsumerBaseV2(
             // VRF Coordinator v2.5 on Base Mainnet
             0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634
