@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LuckyChain – SuperEnalotto On-Chain</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.1/dist/ethers.umd.min.js"></script>
+
+<style>
+    body {
+        background: #0f0f0f;
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+        padding: 30px;
+        max-width: 800px;
+        margin: auto;
+    }
+    h1 { color: #00d4ff; }
+    .card {
+        border: 1px solid #00d4ff;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+    button {
+        background: #00d4ff;
+        color: black;
+        border: none;
+        padding: 10px 18px;
+        font-size: 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    input {
+        width: 60px;
+        padding: 5px;
+        margin-right: 5px;
+        text-align: center;
+    }
+    .label { color: #00d4ff; font-weight: bold; }
+</style>
+</head>
+
+<body>
+
+<h1>LuckyChain – SuperEnalotto On-Chain</h1>
+<p>Your Lucky Moment, Secured by Blockchain</p>
+
+<div class="card">
+    <button id="connectBtn">Connect Wallet</button>
+    <p id="account"></p>
+    <p id="network"></p>
+</div>
+
+<div class="card">
+    <h2>Buy a Ticket (1 USDC)</h2>
+    <p>Select 6 numbers (1–90), 1 Jolly, 1 Superstar</p>
+
+    <div>
+        <label class="label">Numbers:</label><br>
+        <input id="n1" type="number" min="1" max="90">
+        <input id="n2" type="number" min="1" max="90">
+        <input id="n3" type="number" min="1" max="90">
+        <input id="n4" type="number" min="1" max="90">
+        <input id="n5" type="number" min="1" max="90">
+        <input id="n6" type="number" min="1" max="90">
+    </div>
+
+    <div>
+        <label class="label">Jolly:</label>
+        <input id="jolly" type="number" min="1" max="90">
+    </div>
+
+    <div>
+        <label class="label">Superstar:</label>
+        <input id="superstar" type="number" min="1" max="90">
+    </div>
+
+    <button id="buyBtn">Buy Ticket</button>
+</div>
+
+<div class="card">
+    <h2>Round Status</h2>
+    <p><span class="label">Current Round:</span> <span id="round"></span></p>
+    <p><span class="label">Tickets Sold:</span> <span id="ticketCount"></span> / 100</p>
+    <p><span class="label">Jackpot:</span> <span id="jackpot"></span> USDC</p>
+    <p><span class="label">Round Finished?</span> <span id="finished"></span></p>
+</div>
+
+<div class="card">
+    <h2>Winning Numbers</h2>
+    <p><span class="label">Numbers:</span> <span id="wn"></span></p>
+    <p><span class="label">Jolly:</span> <span id="wj"></span></p>
+    <p><span class="label">Superstar:</span> <span id="ws"></span></p>
+</div>
+
+<div class="card">
+    <h2>Claim Prize</h2>
+    <p>Enter Ticket ID:</p>
+    <input id="ticketId" type="number" min="1">
+    <button id="claimBtn">Claim</button>
+    <p id="claimStatus"></p>
+</div>
+
+<script>
+/* -------------------------------------------------------------
+   NETWORK CONFIG
+------------------------------------------------------------- */
+
+const CONTRACTS = {
+    "base-mainnet": {
+        address: "PASTE_BASE_MAINNET_DEPLOYED_ADDRESS_HERE",
+    },
+    "base-sepolia": {
+        address: "PASTE_BASE_SEPOLIA_DEPLOYED_ADDRESS_HERE",
+    },
+    "optimism-mainnet": {
+        address: "PASTE_OPTIMISM_MAINNET_DEPLOYED_ADDRESS_HERE",
+    },
+    "optimism-sepolia": {
+        address: "PASTE_OPTIMISM_SEPOLIA_DEPLOYED_ADDRESS_HERE",
+    }
+};
+
+/* -------------------------------------------------------------
+   ABI DEL CONTRATTO (DA INCOLLARE QUI)
+------------------------------------------------------------- */
+
+const ABI = [
+    // <- INCOLLA QUI L’ABI DEL CONTRATTO COMPILATO
+];
+
+/* -------------------------------------------------------------
+   GLOBALS
+------------------------------------------------------------- */
+
+let provider, signer, contract;
+let currentNetworkKey = null;
+
+/* -------------------------------------------------------------
+   DETECT NETWORK AND SELECT CONTRACT
+------------------------------------------------------------- */
+
+async function detectNetwork() {
+    const net = await provider.getNetwork();
+    let chainId = Number(net.chainId);
+
+    if (chainId === 8453) currentNetworkKey = "base-mainnet";
+    if (chainId === 84532) currentNetworkKey = "base-sepolia";
+    if (chainId === 10) currentNetworkKey = "optimism-mainnet";
+    if (chainId === 11155420) currentNetworkKey = "optimism-sepolia";
+
+    if (!currentNetworkKey) {
+        document.getElementById("network").innerText =
+            "Unsupported network. Switch to Base or Optimism.";
+        return;
+    }
+
+    document.getElementById("network").innerText =
+        "Connected to: " + currentNetworkKey;
+
+    const addr = CONTRACTS[currentNetworkKey].address;
+    contract = new ethers.Contract(addr, ABI, signer);
+
+    updateUI();
+}
+
+/* -------------------------------------------------------------
+   UI UPDATE
+------------------------------------------------------------- */
+
+async function updateUI() {
+    document.getElementById("round").innerText = (await contract.currentRound()).toString();
+    document.getElementById("ticketCount").innerText = (await contract.ticketCount()).toString();
+    document.getElementById("jackpot").innerText = (Number(await contract.jackpot()) / 1e6).toFixed(2);
+    document.getElementById("finished").innerText = (await contract.roundFinished()) ? "YES" : "NO";
+
+    const wn = await contract.winningNumbers();
+    document.getElementById("wn").innerText = wn.join(", ");
+
+    document.getElementById("wj").innerText = (await contract.winningJolly()).toString();
+    document.getElementById("ws").innerText = (await contract.winningSuperstar()).toString();
+}
+
+/* -------------------------------------------------------------
+   BUY TICKET
+------------------------------------------------------------- */
+
+document.getElementById("buyBtn").onclick = async () => {
+    const nums = [
+        Number(n1.value),
+        Number(n2.value),
+        Number(n3.value),
+        Number(n4.value),
+        Number(n5.value),
+        Number(n6.value),
+    ];
+
+    const j = Number(jolly.value);
+    const s = Number(superstar.value);
+
+    try {
+        const tx = await contract.buyTicket(nums, j, s);
+        alert("Ticket purchased! Tx: " + tx.hash);
+        await tx.wait();
+        updateUI();
+    } catch (e) {
+        console.error(e);
+        alert("Error buying ticket.");
+    }
+};
+
+/* -------------------------------------------------------------
+   CLAIM PRIZE
+------------------------------------------------------------- */
+
+document.getElementById("claimBtn").onclick = async () => {
+    const id = Number(ticketId.value);
+    try {
+        const tx = await contract.claimPrize(id);
+        document.getElementById("claimStatus").innerText = "Claim sent: " + tx.hash;
+        await tx.wait();
+        document.getElementById("claimStatus").innerText = "Prize claimed!";
+    } catch (e) {
+        console.error(e);
+        document.getElementById("claimStatus").innerText = "Claim failed.";
+    }
+};
+
+/* -------------------------------------------------------------
+   CONNECT WALLET
+------------------------------------------------------------- */
+
+document.getElementById("connectBtn").onclick = async () => {
+    await window.ethereum.request({ method: "eth_requestAccounts" });
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+
+    document.getElementById("account").innerText =
+        "Connected: " + await signer.getAddress();
+
+    detectNetwork();
+};
+
+/* ------------------------------------------------------------- */
+
+</script>
+</body>
+</html>
