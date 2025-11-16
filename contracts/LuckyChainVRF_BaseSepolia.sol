@@ -1,194 +1,299 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+/*
+    LuckyChain – SuperEnalotto On-Chain
+    Network: Base Sepolia (testnet)
+
+    - Ticket cost: 1 USDC (6 decimals)
+    - 6 numbers (1–90) + Jolly (1–90) + Superstar (1–90)
+    - Max 100 tickets per round
+    - When the 100th ticket is bought:
+        * Request randomness via Chainlink VRF v2.5
+        * Draw 6 winning numbers + 1 Jolly + 1 Superstar
+        * Find all tickets with 6/6 matches
+        * Split the whole jackpot equally across all 6/6 winners
+        * If no 6/6 winners, jackpot rolls over to next round
+
+    Chainlink VRF v2.5 (Base Sepolia):
+    - VRF Coordinator: 0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE
+    - Key Hash (30 gwei):
+      0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71
+
+    USDC on Base Sepolia (6 decimals, test token):
+    - 0x036CbD53842c5426634e7929541eC2318f3dCF7e
+*/
+
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/vrf/VRFCoordinatorV2Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-/*
-    LuckyChain – SuperEnalotto On-Chain
-    Network: Base Sepolia (Testnet USDC + VRF v2.5)
-
-    - Ticket cost: 1 USDC (6 decimals)
-    - 6 numeri (1–90) + Jolly + Superstar
-    - Estrazione dopo 101 ticket (come nel tuo schema attuale)
-*/
-
 contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
-    IERC20 public usdc;
-    VRFCoordinatorV2Interface public COORDINATOR;
-
-    address public owner;
-
-    uint256 public jackpot;      // in USDC (6 decimals)
-    uint256 public ticketCount;  // ticket nel round corrente
-    uint256 public currentRound;
-
-    uint64  public subscriptionId;
-    bytes32 public keyHash;
-    uint32  public callbackGasLimit = 300000;
-    uint16  public requestConfirmations = 3;
+    // -------------------------
+    // Types
+    // -------------------------
 
     struct Ticket {
         address player;
         uint8[6] numbers;
         uint8 jolly;
         uint8 superstar;
-        bool claimed;
-        uint8 matches;
-        bool isWinner;
     }
+
+    struct RoundResult {
+        bool drawn;
+        uint8[6] winningNumbers;
+        uint8 winningJolly;
+        uint8 winningSuperstar;
+    }
+
+    // -------------------------
+    // Constants
+    // -------------------------
+
+    uint8 public constant NUMBERS_PER_TICKET = 6;
+    uint8 public constant MAX_NUMBER = 90;
+    uint256 public constant TICKET_PRICE_USDC = 1_000_000; // 1 USDC (6 decimals)
+    uint256 public constant TICKETS_PER_ROUND = 100;
+    uint32 public constant NUM_WORDS = 8; // 6 numbers + jolly + superstar
+
+    // -------------------------
+    // State
+    // -------------------------
+
+    IERC20 public immutable usdc;
+    VRFCoordinatorV2Interface public immutable COORDINATOR;
+
+    address public owner;
+
+    // VRF config
+    uint64 public subscriptionId;
+    bytes32 public keyHash;
+    uint32 public callbackGasLimit = 300_000;
+    uint16 public requestConfirmations = 3;
+
+    // Game state
+    uint256 public currentRound = 1;
+    uint256 public ticketsInCurrentRound;
+    uint256 public jackpot; // accumulato in USDC (6 decimals)
 
     // round => ticketId => Ticket
     mapping(uint256 => mapping(uint256 => Ticket)) public tickets;
+    // round => numero di ticket emessi in quel round
+    mapping(uint256 => uint256) public ticketsPerRound;
 
-    uint8[6] public winningNumbers;
-    uint8 public winningJolly;
-    uint8 public winningSuperstar;
-    bool  public roundFinished;
+    // Risultati estrazione per round
+    mapping(uint256 => RoundResult) public roundResults;
 
     // VRF requestId => round
-    mapping(uint256 => uint256) public requestToRound;
+    mapping(uint256 => uint256) public requestIdToRound;
 
-    event TicketBought(address indexed player, uint256 round, uint256 ticketId);
-    event DrawRequested(uint256 requestId, uint256 round);
-    event DrawCompleted(
-        uint8[6] winNums,
-        uint8 jolly,
-        uint8 superstar,
-        uint256 round
+    // ultimo round estratto (per UX frontend)
+    uint256 public lastDrawnRound;
+
+    // -------------------------
+    // Events
+    // -------------------------
+
+    event TicketBought(
+        uint256 indexed round,
+        uint256 indexed ticketId,
+        address indexed player
     );
-    event JackpotPaid(uint256 round, uint256 totalJackpot, uint256 winners);
+
+    event DrawRequested(uint256 indexed round, uint256 requestId);
+
+    event DrawCompleted(
+        uint256 indexed round,
+        uint8[6] winningNumbers,
+        uint8 winningJolly,
+        uint8 winningSuperstar
+    );
+
+    event JackpotPaid(
+        uint256 indexed round,
+        uint256 totalPaid,
+        uint256 winnersCount
+    );
+
+    event OwnerChanged(address indexed oldOwner, address indexed newOwner);
+
+    // -------------------------
+    // Modifiers
+    // -------------------------
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
         _;
     }
 
-    constructor(uint64 _subId)
+    // -------------------------
+    // Constructor
+    // -------------------------
+
+    constructor(uint64 _subscriptionId)
         VRFConsumerBaseV2(
-            0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE // VRF Coordinator Base Sepolia
+            // VRF Coordinator v2.5 on Base Sepolia
+            0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE
         )
     {
         owner = msg.sender;
 
-        subscriptionId = _subId;
-
-        // Base Sepolia – 30 gwei key hash
+        // VRF setup
+        subscriptionId = _subscriptionId;
         keyHash = 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71;
-
-        // USDC ufficiale su Base Sepolia (6 decimals, Circle)
-        usdc = IERC20(0x036CbD53842c5426634e7929541eC2318f3dCF7e);
 
         COORDINATOR = VRFCoordinatorV2Interface(
             0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE
         );
 
-        currentRound = 1;
+        // USDC on Base Sepolia (6 decimals, testnet)
+        usdc = IERC20(0x036CbD53842c5426634e7929541eC2318f3dCF7e);
     }
 
+    // -------------------------
+    // User functions
+    // -------------------------
+
+    /// @notice Buy one ticket for the current round (cost: 1 USDC).
+    /// @param nums 6 distinct numbers between 1 and 90
+    /// @param jolly single number 1–90
+    /// @param superstar single number 1–90
     function buyTicket(
         uint8[6] calldata nums,
         uint8 jolly,
         uint8 superstar
     ) external {
-        require(!roundFinished, "Round closed");
-
-        // 1 USDC (6 decimals)
-        require(usdc.transferFrom(msg.sender, address(this), 1e6), "USDC transfer failed");
-
-        jackpot += 1e6;
-        ticketCount++;
-
-        tickets[currentRound][ticketCount] = Ticket(
-            msg.sender,
-            nums,
-            jolly,
-            superstar,
-            false,
-            0,
-            false
+        require(
+            ticketsInCurrentRound < TICKETS_PER_ROUND,
+            "Round is full, wait for next"
         );
 
-        emit TicketBought(msg.sender, currentRound, ticketCount);
+        _validateNumbers(nums);
+        _validateSingle(jolly);
+        _validateSingle(superstar);
 
-        // trigger estrazione alla 101ª schedina
-        if (ticketCount == 101) {
+        // Take 1 USDC from player
+        bool ok = usdc.transferFrom(
+            msg.sender,
+            address(this),
+            TICKET_PRICE_USDC
+        );
+        require(ok, "USDC transfer failed");
+
+        // Update jackpot & ticket count
+        jackpot += TICKET_PRICE_USDC;
+        ticketsInCurrentRound++;
+
+        // Save ticket
+        tickets[currentRound][ticketsInCurrentRound] = Ticket({
+            player: msg.sender,
+            numbers: nums,
+            jolly: jolly,
+            superstar: superstar
+        });
+        ticketsPerRound[currentRound] = ticketsInCurrentRound;
+
+        emit TicketBought(
+            currentRound,
+            ticketsInCurrentRound,
+            msg.sender
+        );
+
+        // If this was the 100th ticket, request randomness
+        if (ticketsInCurrentRound == TICKETS_PER_ROUND) {
             _requestRandomWords();
         }
     }
 
+    // -------------------------
+    // VRF logic
+    // -------------------------
+
     function _requestRandomWords() internal {
-        uint256 reqId = COORDINATOR.requestRandomWords(
+        uint256 requestId = COORDINATOR.requestRandomWords(
             keyHash,
             subscriptionId,
             requestConfirmations,
             callbackGasLimit,
-            8 // 6 numeri + jolly + superstar
+            NUM_WORDS
         );
 
-        requestToRound[reqId] = currentRound;
+        requestIdToRound[requestId] = currentRound;
 
-        roundFinished = true;
-        emit DrawRequested(reqId, currentRound);
+        emit DrawRequested(currentRound, requestId);
     }
 
+    /// @dev VRF callback – called by the VRF coordinator
     function fulfillRandomWords(
-        uint256 reqId,
+        uint256 requestId,
         uint256[] memory randomWords
     ) internal override {
-        uint256 round = requestToRound[reqId];
+        uint256 round = requestIdToRound[requestId];
+        require(round != 0, "Unknown request");
 
-        // 6 numeri vincenti 1–90
-        for (uint8 i = 0; i < 6; i++) {
-            winningNumbers[i] = uint8((randomWords[i] % 90) + 1);
+        RoundResult storage result = roundResults[round];
+        require(!result.drawn, "Already drawn");
+
+        // 6 winning numbers
+        for (uint8 i = 0; i < NUMBERS_PER_TICKET; i++) {
+            result.winningNumbers[i] = uint8(
+                (randomWords[i] % MAX_NUMBER) + 1
+            );
         }
 
-        winningJolly     = uint8((randomWords[6] % 90) + 1);
-        winningSuperstar = uint8((randomWords[7] % 90) + 1);
-
-        emit DrawCompleted(
-            winningNumbers,
-            winningJolly,
-            winningSuperstar,
-            round
+        // Jolly
+        result.winningJolly = uint8(
+            (randomWords[6] % MAX_NUMBER) + 1
+        );
+        // Superstar
+        result.winningSuperstar = uint8(
+            (randomWords[7] % MAX_NUMBER) + 1
         );
 
-        _evaluatePrizes(round);
+        result.drawn = true;
 
-        currentRound++;
-        ticketCount = 0;
-        roundFinished = false;
-        delete winningNumbers;
+        emit DrawCompleted(
+            round,
+            result.winningNumbers,
+            result.winningJolly,
+            result.winningSuperstar
+        );
+
+        _payoutJackpot(round);
+
+        // aggiorna l'ultimo round estratto per la UX
+        lastDrawnRound = round;
+
+        // Prepare next round
+        currentRound += 1;
+        ticketsInCurrentRound = 0;
     }
 
-    function _evaluatePrizes(uint256 round) internal {
+    // -------------------------
+    // Payout logic
+    // -------------------------
+
+    /// @dev Distributes the jackpot to all tickets with 6/6 matches.
+    ///      If no one hits 6, jackpot is kept and rolls over.
+    function _payoutJackpot(uint256 round) internal {
+        uint256 ticketCount = ticketsPerRound[round];
+        if (ticketCount == 0) return;
+
+        RoundResult storage result = roundResults[round];
+
+        // First pass: count winners
         uint256 winners = 0;
-
-        // 1) conta i 6/6
-        for (uint256 i = 1; i <= 101; i++) {
+        for (uint256 i = 1; i <= ticketCount; i++) {
             Ticket storage t = tickets[round][i];
-            if (t.player == address(0)) continue;
-
-            uint8 matchCount = 0;
-            for (uint8 x = 0; x < 6; x++) {
-                for (uint8 y = 0; y < 6; y++) {
-                    if (t.numbers[x] == winningNumbers[y]) {
-                        matchCount++;
-                    }
-                }
-            }
-
-            t.matches = matchCount;
-
-            if (matchCount == 6) {
-                t.isWinner = true;
+            uint8 matches = _countMatches(t.numbers, result.winningNumbers);
+            if (matches == NUMBERS_PER_TICKET) {
                 winners++;
             }
         }
 
         if (winners == 0) {
-            // nessun 6 → jackpot rimane per il prossimo round (rollover)
+            // No winners: jackpot stays and rolls over
             emit JackpotPaid(round, 0, 0);
             return;
         }
@@ -196,15 +301,130 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
         uint256 totalJackpot = jackpot;
         uint256 share = totalJackpot / winners;
 
-        // 2) paga ogni vincitore
-        for (uint256 i = 1; i <= 101; i++) {
+        // Second pass: pay winners
+        for (uint256 i = 1; i <= ticketCount; i++) {
             Ticket storage t = tickets[round][i];
-            if (t.isWinner) {
+            uint8 matches = _countMatches(t.numbers, result.winningNumbers);
+            if (matches == NUMBERS_PER_TICKET) {
                 usdc.transfer(t.player, share);
             }
         }
 
         jackpot = 0;
+
         emit JackpotPaid(round, totalJackpot, winners);
+    }
+
+    // -------------------------
+    // Views / helpers
+    // -------------------------
+
+    /// @notice Returns basic info about the *current* round (ancora aperto).
+    function getCurrentRoundInfo()
+        external
+        view
+        returns (
+            uint256 roundId,
+            uint256 ticketsSold,
+            uint256 currentJackpot,
+            bool isDrawn,
+            uint8[6] memory winNums,
+            uint8 jolly,
+            uint8 superstar
+        )
+    {
+        roundId = currentRound;
+        ticketsSold = ticketsInCurrentRound;
+        currentJackpot = jackpot;
+
+        RoundResult storage res = roundResults[currentRound];
+        isDrawn = res.drawn;
+        winNums = res.winningNumbers;
+        jolly = res.winningJolly;
+        superstar = res.winningSuperstar;
+    }
+
+    /// @notice Returns info about the *last drawn* round (per UX frontend).
+    function getLastDrawInfo()
+        external
+        view
+        returns (
+            uint256 roundId,
+            uint8[6] memory winNums,
+            uint8 jolly,
+            uint8 superstar,
+            bool drawn
+        )
+    {
+        roundId = lastDrawnRound;
+        if (roundId == 0) {
+            // nessuna estrazione ancora fatta, ritorna default
+            return (0, winNums, 0, 0, false);
+        }
+
+        RoundResult storage res = roundResults[roundId];
+        winNums = res.winningNumbers;
+        jolly = res.winningJolly;
+        superstar = res.winningSuperstar;
+        drawn = res.drawn;
+    }
+
+    /// @dev Count how many numbers match between ticket and winning combo.
+    function _countMatches(
+        uint8[6] memory a,
+        uint8[6] memory b
+    ) internal pure returns (uint8 m) {
+        for (uint8 i = 0; i < NUMBERS_PER_TICKET; i++) {
+            for (uint8 j = 0; j < NUMBERS_PER_TICKET; j++) {
+                if (a[i] == b[j]) {
+                    m++;
+                    break;
+                }
+            }
+        }
+    }
+
+    function _validateNumbers(uint8[6] calldata nums) internal pure {
+        for (uint8 i = 0; i < NUMBERS_PER_TICKET; i++) {
+            require(
+                nums[i] >= 1 && nums[i] <= MAX_NUMBER,
+                "Number out of range"
+            );
+            for (uint8 j = i + 1; j < NUMBERS_PER_TICKET; j++) {
+                require(nums[i] != nums[j], "Duplicate number");
+            }
+        }
+    }
+
+    function _validateSingle(uint8 n) internal pure {
+        require(n >= 1 && n <= MAX_NUMBER, "Number out of range");
+    }
+
+    // -------------------------
+    // Admin
+    // -------------------------
+
+    function setCallbackGasLimit(uint32 _limit) external onlyOwner {
+        callbackGasLimit = _limit;
+    }
+
+    function setRequestConfirmations(uint16 _conf) external onlyOwner {
+        requestConfirmations = _conf;
+    }
+
+    function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "Zero address");
+        emit OwnerChanged(owner, newOwner);
+        owner = newOwner;
+    }
+
+    /// @notice Recover any ERC20 mistakenly sent (NOT USDC jackpot logic).
+    function rescueTokens(
+        address token,
+        address to,
+        uint256 amount
+    ) external onlyOwner {
+        require(to != address(0), "Zero address");
+        IERC20(token).transfer(to, amount);
     }
 }
