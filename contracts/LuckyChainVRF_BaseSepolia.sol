@@ -24,8 +24,8 @@ pragma solidity ^0.8.20;
     - 0x036CbD53842c5426634e7929541eC2318f3dCF7e
 */
 
-import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
-import "@chainlink/contracts/src/v0.8/vrf/VRFCoordinatorV2Interface.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
