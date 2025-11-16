@@ -10,9 +10,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
     Network: Base Sepolia (Testnet USDC + VRF v2.5)
 
     - Ticket cost: 1 USDC (6 decimals)
-    - 6 numbers (1–90) + Jolly + Superstar
-    - 101 tickets per round (come nel tuo codice attuale)
-    - Alla 101ª schedina: richiesta VRF, estrazione, calcolo vincitori
+    - 6 numeri (1–90) + Jolly + Superstar
+    - Estrazione dopo 101 ticket (come nel tuo schema attuale)
 */
 
 contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
@@ -21,22 +20,21 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
 
     address public owner;
 
-    uint256 public jackpot;      // in USDC (6 decimali)
+    uint256 public jackpot;      // in USDC (6 decimals)
     uint256 public ticketCount;  // ticket nel round corrente
+    uint256 public currentRound;
 
     uint64  public subscriptionId;
     bytes32 public keyHash;
     uint32  public callbackGasLimit = 300000;
     uint16  public requestConfirmations = 3;
 
-    uint256 public currentRound;
-
     struct Ticket {
         address player;
         uint8[6] numbers;
         uint8 jolly;
         uint8 superstar;
-        bool claimed;   // non usato ora, ma pronto per future claim manuali
+        bool claimed;
         uint8 matches;
         bool isWinner;
     }
@@ -44,7 +42,6 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
     // round => ticketId => Ticket
     mapping(uint256 => mapping(uint256 => Ticket)) public tickets;
 
-    // numeri vincenti dell’ultimo round (per semplicità, legati a currentRound)
     uint8[6] public winningNumbers;
     uint8 public winningJolly;
     uint8 public winningSuperstar;
@@ -77,10 +74,10 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
 
         subscriptionId = _subId;
 
-        // Base Sepolia – 30 gwei key hash (ufficiale Chainlink)
+        // Base Sepolia – 30 gwei key hash
         keyHash = 0x9e1344a1247c8a1785d0a4681a27152bffdb43666ae5bf7d14d24a5efd44bf71;
 
-        // USDC ufficiale su Base Sepolia (6 decimali, Circle)
+        // USDC ufficiale su Base Sepolia (6 decimals, Circle)
         usdc = IERC20(0x036CbD53842c5426634e7929541eC2318f3dCF7e);
 
         COORDINATOR = VRFCoordinatorV2Interface(
@@ -90,9 +87,6 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
         currentRound = 1;
     }
 
-    // ----------------------------
-    // BUY TICKET
-    // ----------------------------
     function buyTicket(
         uint8[6] calldata nums,
         uint8 jolly,
@@ -100,7 +94,7 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
     ) external {
         require(!roundFinished, "Round closed");
 
-        // 1 USDC con 6 decimali
+        // 1 USDC (6 decimals)
         require(usdc.transferFrom(msg.sender, address(this), 1e6), "USDC transfer failed");
 
         jackpot += 1e6;
@@ -118,15 +112,12 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
 
         emit TicketBought(msg.sender, currentRound, ticketCount);
 
-        // nel tuo codice: trigger alla 101ª schedina
+        // trigger estrazione alla 101ª schedina
         if (ticketCount == 101) {
             _requestRandomWords();
         }
     }
 
-    // ----------------------------
-    // VRF REQUEST
-    // ----------------------------
     function _requestRandomWords() internal {
         uint256 reqId = COORDINATOR.requestRandomWords(
             keyHash,
@@ -142,9 +133,6 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
         emit DrawRequested(reqId, currentRound);
     }
 
-    // ----------------------------
-    // VRF FULFILL
-    // ----------------------------
     function fulfillRandomWords(
         uint256 reqId,
         uint256[] memory randomWords
@@ -156,7 +144,6 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
             winningNumbers[i] = uint8((randomWords[i] % 90) + 1);
         }
 
-        // Jolly e Superstar
         winningJolly     = uint8((randomWords[6] % 90) + 1);
         winningSuperstar = uint8((randomWords[7] % 90) + 1);
 
@@ -169,20 +156,16 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
 
         _evaluatePrizes(round);
 
-        // prepara nuovo round
         currentRound++;
         ticketCount = 0;
         roundFinished = false;
         delete winningNumbers;
     }
 
-    // ----------------------------
-    // CALCOLO PREMI
-    // ----------------------------
     function _evaluatePrizes(uint256 round) internal {
         uint256 winners = 0;
 
-        // 1) conta i vincitori con 6/6
+        // 1) conta i 6/6
         for (uint256 i = 1; i <= 101; i++) {
             Ticket storage t = tickets[round][i];
             if (t.player == address(0)) continue;
@@ -205,7 +188,7 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
         }
 
         if (winners == 0) {
-            // nessun 6: jackpot rimane (rollover)
+            // nessun 6 → jackpot rimane per il prossimo round (rollover)
             emit JackpotPaid(round, 0, 0);
             return;
         }
@@ -213,7 +196,7 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
         uint256 totalJackpot = jackpot;
         uint256 share = totalJackpot / winners;
 
-        // 2) paga ogni vincitore con la sua quota
+        // 2) paga ogni vincitore
         for (uint256 i = 1; i <= 101; i++) {
             Ticket storage t = tickets[round][i];
             if (t.isWinner) {
