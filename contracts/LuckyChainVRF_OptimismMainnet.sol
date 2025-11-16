@@ -131,7 +131,7 @@ contract LuckyChainVRF_OptimismMainnet is VRFConsumerBaseV2 {
     // Constructor
     // -------------------------
 
-    constructor(uint64 _subscriptionId)
+    constructor(uint256 _subscriptionId)
         VRFConsumerBaseV2(
             // VRF Coordinator v2.5 on Optimism Mainnet
             0x5FE58960F730153eb5A84a47C51BD4E58302E1c8
