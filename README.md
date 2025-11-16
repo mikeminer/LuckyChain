@@ -40,15 +40,3 @@ The frontend is a **single-page dApp** (`index.html`) using **ethers.js** and Me
 
 There is **no central server**: logic is entirely implemented within the smart contracts.
 
----
-
-## 🧱 Contracts Overview
-
-All 4 contracts share the **same ABI and game logic**, only addresses (VRF coordinator, USDC) and network IDs change.
-
-> ⚠️ Replace the placeholders below with your actual deployed contract addresses.
-
-### 1. Base Mainnet
-
-```solidity
-contract LuckyChainVRF_BaseMainnet is VRFConsumerBaseV2 { ... }
