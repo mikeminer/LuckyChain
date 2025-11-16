@@ -86,6 +86,9 @@ contract LuckyChainVRF_OptimismSepolia is VRFConsumerBaseV2 {
     // VRF requestId => round
     mapping(uint256 => uint256) public requestIdToRound;
 
+    // ultimo round estratto (per UX frontend)
+    uint256 public lastDrawnRound;
+
     // -------------------------
     // Events
     // -------------------------
@@ -257,6 +260,9 @@ contract LuckyChainVRF_OptimismSepolia is VRFConsumerBaseV2 {
 
         _payoutJackpot(round);
 
+        // aggiorna l'ultimo round estratto per la UX
+        lastDrawnRound = round;
+
         // Prepare next round
         currentRound += 1;
         ticketsInCurrentRound = 0;
@@ -311,7 +317,7 @@ contract LuckyChainVRF_OptimismSepolia is VRFConsumerBaseV2 {
     // Views / helpers
     // -------------------------
 
-    /// @notice Returns basic info about the current round.
+    /// @notice Returns basic info about the *current* round (ancora aperto).
     function getCurrentRoundInfo()
         external
         view
@@ -334,6 +340,31 @@ contract LuckyChainVRF_OptimismSepolia is VRFConsumerBaseV2 {
         winNums = res.winningNumbers;
         jolly = res.winningJolly;
         superstar = res.winningSuperstar;
+    }
+
+    /// @notice Returns info about the *last drawn* round (per UX frontend).
+    function getLastDrawInfo()
+        external
+        view
+        returns (
+            uint256 roundId,
+            uint8[6] memory winNums,
+            uint8 jolly,
+            uint8 superstar,
+            bool drawn
+        )
+    {
+        roundId = lastDrawnRound;
+        if (roundId == 0) {
+            // nessuna estrazione ancora fatta, ritorna default
+            return (0, winNums, 0, 0, false);
+        }
+
+        RoundResult storage res = roundResults[roundId];
+        winNums = res.winningNumbers;
+        jolly = res.winningJolly;
+        superstar = res.winningSuperstar;
+        drawn = res.drawn;
     }
 
     /// @dev Count how many numbers match between ticket and winning combo.
