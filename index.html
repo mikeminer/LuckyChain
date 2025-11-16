@@ -68,7 +68,7 @@
     <button id="connectBtn">Connect Wallet</button>
     <p id="account"></p>
     <p id="network"></p>
-    <p class="small badge">Network: Base Sepolia (chainId 84532)</p>
+    <p class="small badge">Target: Base Sepolia (chainId 84532)</p>
 </div>
 
 <div class="card">
@@ -97,8 +97,8 @@
 
     <button id="buyBtn" disabled>Buy Ticket</button>
     <p class="small">
-        Make sure you hold test USDC (<code>0x036CbD53842c5426634e7929541eC2318f3dCF7e</code>)
-        on Base Sepolia and approved 1 USDC to this contract.
+        Use test USDC (<code>0x036CbD53842c5426634e7929541eC2318f3dCF7e</code>) on Base Sepolia
+        and approve 1 USDC to this contract.
     </p>
 </div>
 
@@ -129,14 +129,13 @@
 
 <script>
 /* -------------------------------------------------------------
-   CONFIG – METTI QUI L’ADDRESS DEL TUO CONTRATTO
-   (LuckyChainVRF_BaseSepolia su Base Sepolia)
+   CONFIG – ADDRESS DEL TUO CONTRATTO LuckyChainVRF_BaseSepolia
 ------------------------------------------------------------- */
 
-const CONTRACT_ADDRESS = "0x33736a45DdFF374E9c3bab66D76C1B3B8292def0"; // cambia se hai un altro deploy
+const CONTRACT_ADDRESS = "0x33736a45DdFF374E9c3bab66D76C1B3B8292def0"; // cambia se hai un nuovo deploy
 
 /* -------------------------------------------------------------
-   ABI DEL CONTRATTO (ALLINEATA AL TUO SOL)
+   ABI ALLINEATA AL CONTRATTO CHE HAI POSTATO
 ------------------------------------------------------------- */
 
 const ABI = [
@@ -151,15 +150,8 @@ const ABI = [
 
 let provider, signer, contract;
 
-/* -------------------------------------------------------------
-   HELPERS
-------------------------------------------------------------- */
-
 function $(id) { return document.getElementById(id); }
-
-function setStatus(msg) {
-    $("status").innerText = msg || "";
-}
+function setStatus(msg) { $("status").innerText = msg || ""; }
 
 /* -------------------------------------------------------------
    CONNECT WALLET
@@ -185,32 +177,39 @@ $("connectBtn").onclick = async () => {
 
         if (chainId !== 84532) {
             setStatus("Please switch MetaMask to Base Sepolia (chainId 84532).");
-        } else {
-            setStatus("Connected on Base Sepolia.");
+            // NON inizializziamo il contratto se la rete è sbagliata
+            contract = null;
+            $("buyBtn").disabled = true;
+            return;
         }
 
+        setStatus("Connected on Base Sepolia.");
         contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
         $("buyBtn").disabled = false;
 
         await updateUI();
     } catch (e) {
         console.error(e);
-        setStatus("Failed to connect wallet.");
+        setStatus("Failed to connect wallet. See console.");
     }
 };
 
 /* -------------------------------------------------------------
-   UPDATE UI (ROUND STATUS + WINNING NUMBERS + LAST DRAW)
+   UPDATE UI (ROUND + WINNING + LAST DRAW)
 ------------------------------------------------------------- */
 
 async function updateUI() {
-    if (!contract) return;
+    if (!contract) {
+        console.warn("No contract instance. Make sure you're on Base Sepolia.");
+        return;
+    }
 
     try {
         setStatus("Loading round info...");
 
+        // getCurrentRoundInfo() returns:
+        // (roundId, ticketsSold, currentJackpot, isDrawn, nums[6], jolly, superstar)
         const info = await contract.getCurrentRoundInfo();
-        // info = [roundId, ticketsSold, currentJackpot, isDrawn, nums[6], jolly, superstar]
 
         const roundId        = info[0];
         const ticketsSold    = info[1];
@@ -235,9 +234,9 @@ async function updateUI() {
             $("ws").innerText = "-";
         }
 
-        // Last draw info
+        // getLastDrawInfo() returns:
+        // (roundId, nums[6], jolly, superstar, drawn)
         const last = await contract.getLastDrawInfo();
-        // last = [roundId, nums[6], jolly, superstar, drawn]
         const lastRoundId = last[0];
         const lastNums    = last[1];
         const lastJolly   = last[2];
@@ -258,8 +257,8 @@ async function updateUI() {
 
         setStatus("");
     } catch (e) {
-        console.error(e);
-        setStatus("Failed to load round data.");
+        console.error("updateUI error:", e);
+        setStatus("Failed to load round data. See console.");
     }
 }
 
@@ -269,7 +268,7 @@ async function updateUI() {
 
 $("buyBtn").onclick = async () => {
     if (!contract) {
-        alert("Connect wallet first.");
+        alert("Connect wallet on Base Sepolia first.");
         return;
     }
 
@@ -315,16 +314,15 @@ $("buyBtn").onclick = async () => {
         setStatus("Ticket confirmed on-chain.");
         await updateUI();
     } catch (e) {
-        console.error(e);
+        console.error("buyTicket error:", e);
         setStatus("Error buying ticket. Check console.");
         alert("Error buying ticket.");
     }
 };
 
 /* -------------------------------------------------------------
-   OPTIONAL: AUTO-REFRESH ON CHAIN CHANGE
+   AUTO-RELOAD ON CHAIN CHANGE
 ------------------------------------------------------------- */
-
 if (window.ethereum) {
     window.ethereum.on("chainChanged", () => {
         window.location.reload();
