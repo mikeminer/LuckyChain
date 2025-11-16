@@ -129,29 +129,37 @@
 
 <script>
 /* -------------------------------------------------------------
-   CONFIG – ADDRESS DEL TUO CONTRATTO LuckyChainVRF_BaseSepolia
+   CONFIG – ADDRESS DEL TUO CONTRATTO SU BASE SEPOLIA
 ------------------------------------------------------------- */
 
-const CONTRACT_ADDRESS = "0x33736a45DdFF374E9c3bab66D76C1B3B8292def0"; // cambia se hai un nuovo deploy
-
-/* -------------------------------------------------------------
-   ABI ALLINEATA AL CONTRATTO CHE HAI POSTATO
-------------------------------------------------------------- */
-
-const ABI = [
-    "function buyTicket(uint8[6] nums, uint8 jolly, uint8 superstar)",
-    "function getCurrentRoundInfo() view returns (uint256 roundId, uint256 ticketsSold, uint256 currentJackpot, bool isDrawn, uint8[6] nums, uint8 jolly, uint8 superstar)",
-    "function getLastDrawInfo() view returns (uint256 roundId, uint8[6] nums, uint8 jolly, uint8 superstar, bool drawn)"
-];
+const CONTRACT_ADDRESS = "0x33736a45DdFF374E9c3bab66D76C1B3B8292def0";
 
 /* -------------------------------------------------------------
    GLOBALS
 ------------------------------------------------------------- */
 
-let provider, signer, contract;
+let provider, signer, contract, contractInterface;
 
 function $(id) { return document.getElementById(id); }
 function setStatus(msg) { $("status").innerText = msg || ""; }
+
+/* -------------------------------------------------------------
+   ABI DYNAMIC FROM BLOCKSCOUT
+------------------------------------------------------------- */
+
+async function loadAbiFromBlockscout() {
+    const url = `https://base-sepolia.blockscout.com/api?module=contract&action=getabi&address=${CONTRACT_ADDRESS}`;
+    console.log("Fetching ABI from:", url);
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.status !== "1") {
+        console.error("Blockscout ABI error:", data);
+        throw new Error("Blockscout ABI error: " + data.result);
+    }
+    const abi = JSON.parse(data.result);
+    console.log("ABI loaded from Blockscout:", abi);
+    return abi;
+}
 
 /* -------------------------------------------------------------
    CONNECT WALLET
@@ -177,22 +185,39 @@ $("connectBtn").onclick = async () => {
 
         if (chainId !== 84532) {
             setStatus("Please switch MetaMask to Base Sepolia (chainId 84532).");
-            // NON inizializziamo il contratto se la rete è sbagliata
             contract = null;
             $("buyBtn").disabled = true;
             return;
         }
 
-        setStatus("Connected on Base Sepolia.");
-        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+        setStatus("Connected on Base Sepolia. Loading ABI from Blockscout...");
+        const abi = await loadAbiFromBlockscout();
+        contract = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+        contractInterface = contract.interface;
+
         $("buyBtn").disabled = false;
+        setStatus("Ready.");
 
         await updateUI();
     } catch (e) {
         console.error(e);
-        setStatus("Failed to connect wallet. See console.");
+        setStatus("Failed to connect / load ABI. See console.");
     }
 };
+
+/* -------------------------------------------------------------
+   DETECT SUPPORTO FUNZIONI (NUOVO vs VECCHIO STILE)
+------------------------------------------------------------- */
+
+function hasFunction(name) {
+    if (!contractInterface) return false;
+    try {
+        contractInterface.getFunction(name);
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 /* -------------------------------------------------------------
    UPDATE UI (ROUND + WINNING + LAST DRAW)
@@ -200,54 +225,166 @@ $("connectBtn").onclick = async () => {
 
 async function updateUI() {
     if (!contract) {
-        console.warn("No contract instance. Make sure you're on Base Sepolia.");
+        console.warn("No contract instance. Make sure you're on Base Sepolia and ABI loaded.");
         return;
     }
 
     try {
-        setStatus("Loading round info...");
+        setStatus("Loading round data...");
 
-        // getCurrentRoundInfo() returns:
-        // (roundId, ticketsSold, currentJackpot, isDrawn, nums[6], jolly, superstar)
-        const info = await contract.getCurrentRoundInfo();
+        // 1) Prova prima lo stile NUOVO: getCurrentRoundInfo() / getLastDrawInfo()
+        if (hasFunction("getCurrentRoundInfo")) {
+            console.log("Using NEW style getCurrentRoundInfo/getLastDrawInfo");
+            const info = await contract.getCurrentRoundInfo();
+            // (roundId, ticketsSold, currentJackpot, isDrawn, nums[6], jolly, superstar)
+            const roundId        = info[0];
+            const ticketsSold    = info[1];
+            const currentJackpot = info[2];
+            const isDrawn        = info[3];
+            const nums           = info[4];
+            const jolly          = info[5];
+            const superstar      = info[6];
 
-        const roundId        = info[0];
-        const ticketsSold    = info[1];
-        const currentJackpot = info[2];
-        const isDrawn        = info[3];
-        const nums           = info[4];
-        const jolly          = info[5];
-        const superstar      = info[6];
+            $("round").innerText       = roundId.toString();
+            $("ticketCount").innerText = ticketsSold.toString();
+            $("jackpot").innerText     = (Number(currentJackpot) / 1e6).toFixed(2);
+            $("finished").innerText    = isDrawn ? "YES" : "NO";
+
+            if (isDrawn) {
+                $("wn").innerText = Array.from(nums).join(", ");
+                $("wj").innerText = jolly.toString();
+                $("ws").innerText = superstar.toString();
+            } else {
+                $("wn").innerText = "-";
+                $("wj").innerText = "-";
+                $("ws").innerText = "-";
+            }
+
+            if (hasFunction("getLastDrawInfo")) {
+                const last = await contract.getLastDrawInfo();
+                // (roundId, nums[6], jolly, superstar, drawn)
+                const lastRoundId = last[0];
+                const lastNums    = last[1];
+                const lastJolly   = last[2];
+                const lastSuper   = last[3];
+                const lastDrawn   = last[4];
+
+                if (lastDrawn && (lastRoundId !== 0n && lastRoundId !== 0)) {
+                    $("lastRound").innerText = lastRoundId.toString();
+                    $("lastWn").innerText    = Array.from(lastNums).join(", ");
+                    $("lastWj").innerText    = lastJolly.toString();
+                    $("lastWs").innerText    = lastSuper.toString();
+                } else {
+                    $("lastRound").innerText = "-";
+                    $("lastWn").innerText    = "-";
+                    $("lastWj").innerText    = "-";
+                    $("lastWs").innerText    = "-";
+                }
+            } else {
+                $("lastRound").innerText = "-";
+                $("lastWn").innerText    = "-";
+                $("lastWj").innerText    = "-";
+                $("lastWs").innerText    = "-";
+            }
+
+            setStatus("");
+            return;
+        }
+
+        // 2) FALLBACK: vecchio stile, variabili pubbliche:
+        //    currentRound(), ticketCount(), jackpot(), roundFinished(),
+        //    winningNumbers[...] / winningJolly() / winningSuperstar()
+        console.log("Using OLD style public variables");
+
+        let roundId = 0n;
+        let ticketsSold = 0n;
+        let currentJackpot = 0n;
+        let isDrawn = false;
+
+        if (hasFunction("currentRound")) {
+            roundId = await contract.currentRound();
+        }
+        if (hasFunction("ticketCount")) {
+            ticketsSold = await contract.ticketCount();
+        } else if (hasFunction("ticketsInCurrentRound")) {
+            ticketsSold = await contract.ticketsInCurrentRound();
+        }
+
+        if (hasFunction("jackpot")) {
+            currentJackpot = await contract.jackpot();
+        }
+
+        if (hasFunction("roundFinished")) {
+            isDrawn = await contract.roundFinished();
+        }
 
         $("round").innerText       = roundId.toString();
         $("ticketCount").innerText = ticketsSold.toString();
         $("jackpot").innerText     = (Number(currentJackpot) / 1e6).toFixed(2);
         $("finished").innerText    = isDrawn ? "YES" : "NO";
 
-        if (isDrawn) {
-            $("wn").innerText = Array.from(nums).join(", ");
-            $("wj").innerText = jolly.toString();
-            $("ws").innerText = superstar.toString();
+        // winningNumbers: se è public uint8[6], getter è winningNumbers(uint256) -> uint8
+        // se è in una struct RoundResult, abbiamo usato ramo NEW, quindi qui prevediamo la versione semplice
+        let numsArr = [];
+        if (hasFunction("winningNumbers")) {
+            try {
+                // Proviamo se esiste come funzione che ritorna array intero (pochi compiler)
+                const maybeArray = await contract.winningNumbers();
+                if (Array.isArray(maybeArray)) {
+                    numsArr = Array.from(maybeArray);
+                }
+            } catch (e) {
+                // fallback: public fixed array -> indicizzata
+                numsArr = [];
+                for (let i = 0; i < 6; i++) {
+                    try {
+                        const n = await contract.winningNumbers(i);
+                        numsArr.push(Number(n));
+                    } catch {}
+                }
+            }
+        }
+
+        if (numsArr.length > 0 && isDrawn) {
+            $("wn").innerText = numsArr.join(", ");
         } else {
             $("wn").innerText = "-";
+        }
+
+        if (hasFunction("winningJolly")) {
+            const j = await contract.winningJolly();
+            $("wj").innerText = Number(j).toString();
+        } else {
             $("wj").innerText = "-";
+        }
+
+        if (hasFunction("winningSuperstar")) {
+            const s = await contract.winningSuperstar();
+            $("ws").innerText = Number(s).toString();
+        } else {
             $("ws").innerText = "-";
         }
 
-        // getLastDrawInfo() returns:
-        // (roundId, nums[6], jolly, superstar, drawn)
-        const last = await contract.getLastDrawInfo();
-        const lastRoundId = last[0];
-        const lastNums    = last[1];
-        const lastJolly   = last[2];
-        const lastSuper   = last[3];
-        const lastDrawn   = last[4];
+        // last draw: se c'è lastDrawnRound + roundResults(round)
+        if (hasFunction("lastDrawnRound") && hasFunction("roundResults")) {
+            const lastRoundId = await contract.lastDrawnRound();
+            if (lastRoundId === 0n || lastRoundId === 0) {
+                $("lastRound").innerText = "-";
+                $("lastWn").innerText    = "-";
+                $("lastWj").innerText    = "-";
+                $("lastWs").innerText    = "-";
+            } else {
+                $("lastRound").innerText = lastRoundId.toString();
+                const lastRes = await contract.roundResults(lastRoundId);
+                // speriamo che la struct sia compatibile: (bool drawn, uint8[6], uint8, uint8)
+                const lastNums  = lastRes[1];
+                const lastJolly = lastRes[2];
+                const lastSuper = lastRes[3];
 
-        if (lastDrawn && (lastRoundId !== 0n && lastRoundId !== 0)) {
-            $("lastRound").innerText = lastRoundId.toString();
-            $("lastWn").innerText    = Array.from(lastNums).join(", ");
-            $("lastWj").innerText    = lastJolly.toString();
-            $("lastWs").innerText    = lastSuper.toString();
+                $("lastWn").innerText = Array.from(lastNums).join(", ");
+                $("lastWj").innerText = Number(lastJolly).toString();
+                $("lastWs").innerText = Number(lastSuper).toString();
+            }
         } else {
             $("lastRound").innerText = "-";
             $("lastWn").innerText    = "-";
@@ -269,6 +406,11 @@ async function updateUI() {
 $("buyBtn").onclick = async () => {
     if (!contract) {
         alert("Connect wallet on Base Sepolia first.");
+        return;
+    }
+
+    if (!hasFunction("buyTicket")) {
+        alert("This contract does not expose buyTicket(uint8[6],uint8,uint8) in ABI.");
         return;
     }
 
