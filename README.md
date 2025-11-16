@@ -1,4 +1,5 @@
-# 🎲 LuckyChain – Your Lucky Moment, Secured by Blockchain
+# 🎲 LuckyChain – Your Lucky Moment, Secured by Blockchain CURRENTLY WORKING ONLY BASE SEPOLIA . REQUEST USDC FROM CIRCLE FAUCET ON BASE SEPOLIA https://faucet.circle.com/
+DAPP https://mikeminer.github.io/LuckyChain/
 
 LuckyChain is an **on-chain 6/90 lottery** inspired by the Italian SuperEnalotto, rebuilt natively for **EVM chains** using:
 
