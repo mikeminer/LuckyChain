@@ -131,7 +131,7 @@ contract LuckyChainVRF_BaseSepolia is VRFConsumerBaseV2 {
     // Constructor
     // -------------------------
 
-    constructor(uint64 _subscriptionId)
+    constructor(uint256 _subscriptionId)
         VRFConsumerBaseV2(
             // VRF Coordinator v2.5 on Base Sepolia
             0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE
