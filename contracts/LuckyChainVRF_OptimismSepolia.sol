@@ -129,7 +129,7 @@ contract LuckyChainVRF_OptimismSepolia is VRFConsumerBaseV2 {
     // Constructor
     // -------------------------
 
-    constructor(uint64 _subscriptionId)
+    constructor(uint256 _subscriptionId)
         VRFConsumerBaseV2(
             // VRF Coordinator v2.5 on Optimism Sepolia
             0x02667f44a6a44E4BDddCF80e724512Ad3426B17d
